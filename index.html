@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>數獨小天才 🧩</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Fredoka+One&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f0f4ff;
+    --surface: #ffffff;
+    --surface2: #f8faff;
+    --border: #dde3f5;
+    --border-bold: #aab4d8;
+    --accent: #4c6ef5;
+    --accent2: #7950f2;
+    --accent-light: #e8ecff;
+    --green: #37b24d;
+    --green-light: #ebfbee;
+    --red: #f03e3e;
+    --red-light: #fff5f5;
+    --amber: #f59f00;
+    --amber-light: #fff9db;
+    --cell-given: #2c3e7a;
+    --cell-user: #4c6ef5;
+    --cell-error: #f03e3e;
+    --cell-hint: #37b24d;
+    --shadow: 0 4px 24px rgba(76,110,245,0.10);
+    --shadow-sm: 0 2px 8px rgba(76,110,245,0.08);
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 0 40px;
+    background-image: radial-gradient(circle at 20% 20%, #e0e7ff 0%, transparent 50%),
+                      radial-gradient(circle at 80% 80%, #f0e6ff 0%, transparent 50%);
+  }
+
+  /* HEADER */
+  header {
+    width: 100%;
+    background: var(--surface);
+    border-bottom: 1.5px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: var(--shadow-sm);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .logo {
+    font-family: 'Fredoka One', cursive;
+    font-size: 26px;
+    color: var(--accent);
+    letter-spacing: 0.5px;
+  }
+  .logo span { color: var(--accent2); }
+  .header-right { display: flex; gap: 8px; align-items: center; }
+  .pill {
+    font-size: 13px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 99px;
+    background: var(--accent-light);
+    color: var(--accent);
+    border: 1.5px solid #c5d0ff;
+    white-space: nowrap;
+  }
+  .pill.timer { font-variant-numeric: tabular-nums; min-width: 70px; text-align: center; }
+  .pill.hint { background: var(--amber-light); color: #c07800; border-color: #ffe066; }
+
+  /* MAIN LAYOUT */
+  main {
+    width: 100%;
+    max-width: 540px;
+    padding: 16px 12px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
+  /* CONTROLS BAR */
+  .controls {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .btn {
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 10px 16px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--cell-given);
+    cursor: pointer;
+    transition: all 0.15s;
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.primary:active { background: #3b5bdb; }
+  .btn.warn { background: var(--amber); color: #fff; border-color: var(--amber); }
+  .btn.danger-btn { background: var(--red-light); color: var(--red); border-color: #ffc9c9; }
+  .btn.success-btn { background: var(--green-light); color: var(--green); border-color: #b2f2bb; }
+  .btn.active { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+  select.btn {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234c6ef5' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+  }
+
+  /* BOARD */
+  #board-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+  #board {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    border: 3px solid var(--cell-given);
+    border-radius: 12px;
+    overflow: hidden;
+    width: 100%;
+    max-width: 460px;
+    aspect-ratio: 1;
+    background: var(--border-bold);
+    gap: 1px;
+    box-shadow: var(--shadow);
+  }
+  .cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Nunito', sans-serif;
+    font-size: clamp(15px, 4vw, 24px);
+    font-weight: 700;
+    cursor: pointer;
+    background: var(--surface);
+    color: var(--cell-given);
+    transition: background 0.1s;
+    user-select: none;
+    position: relative;
+    aspect-ratio: 1;
+  }
+  .cell.given { color: var(--cell-given); font-weight: 900; }
+  .cell.user-input { color: var(--cell-user); }
+  .cell.error { color: var(--cell-error) !important; background: var(--red-light) !important; }
+  .cell.hint-cell { color: var(--cell-hint) !important; background: var(--green-light) !important; }
+  .cell.selected { background: #dde3ff !important; }
+  .cell.same-val { background: #e8ecff; }
+  .cell.highlight { background: var(--surface2); }
+  .cell.border-right { border-right: 2.5px solid var(--cell-given) !important; }
+  .cell.border-bottom { border-bottom: 2.5px solid var(--cell-given) !important; }
+
+  .note-grid {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    grid-template-rows: repeat(3,1fr);
+    width: 100%;
+    height: 100%;
+    padding: 2px;
+  }
+  .note-grid span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(5px, 1.3vw, 9px);
+    font-weight: 600;
+    color: var(--accent2);
+    line-height: 1;
+  }
+
+  /* NUMPAD */
+  #numpad {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    width: 100%;
+    max-width: 460px;
+  }
+  .num-btn {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(20px, 6vw, 32px);
+    padding: 16px 0;
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--border);
+    background: var(--surface);
+    color: var(--cell-given);
+    cursor: pointer;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.12s;
+    user-select: none;
+  }
+  .num-btn:active { transform: scale(0.93); box-shadow: none; }
+  .num-btn:hover { background: var(--accent-light); border-color: #b0c0ff; }
+  .num-btn.erase { color: var(--red); font-size: clamp(16px,4.5vw,24px); font-family: 'Nunito', sans-serif; font-weight: 800; }
+
+  /* MESSAGE */
+  #msg {
+    font-size: 15px;
+    font-weight: 700;
+    min-height: 32px;
+    text-align: center;
+    padding: 6px 16px;
+    border-radius: 99px;
+    background: transparent;
+    color: var(--accent);
+    transition: all 0.3s;
+  }
+  #msg.error { background: var(--red-light); color: var(--red); }
+  #msg.success { background: var(--green-light); color: var(--green); }
+
+  /* PROGRESS BAR */
+  #progress-wrap {
+    width: 100%;
+    max-width: 460px;
+    height: 8px;
+    background: var(--border);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  #progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 99px;
+    transition: width 0.4s;
+    width: 0%;
+  }
+
+  /* WIN OVERLAY */
+  #win-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(30,30,60,0.55);
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    backdrop-filter: blur(4px);
+  }
+  #win-overlay.show { display: flex; }
+  #win-box {
+    background: var(--surface);
+    border-radius: 24px;
+    padding: 36px 32px;
+    text-align: center;
+    max-width: 340px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(76,110,245,0.2);
+    animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes popIn { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  #win-box .trophy { font-size: 64px; margin-bottom: 8px; }
+  #win-box h2 { font-family: 'Fredoka One', cursive; font-size: 32px; color: var(--accent); margin-bottom: 8px; }
+  #win-box p { font-size: 16px; color: #666; margin-bottom: 24px; line-height: 1.6; }
+  .stars { font-size: 32px; margin-bottom: 12px; letter-spacing: 4px; }
+
+  /* DIFFICULTY BADGES */
+  .diff-easy { background: var(--green-light); color: var(--green); border-color: #b2f2bb; }
+  .diff-medium { background: var(--amber-light); color: #c07800; border-color: #ffe066; }
+  .diff-hard { background: var(--red-light); color: var(--red); border-color: #ffc9c9; }
+
+  @media (max-width: 400px) {
+    .logo { font-size: 20px; }
+    .pill { font-size: 12px; padding: 4px 8px; }
+    .controls { gap: 6px; }
+    .btn { font-size: 12px; padding: 8px 10px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">數獨<span>小天才</span> 🧩</div>
+  <div class="header-right">
+    <span class="pill" id="lvl-badge">初級</span>
+    <span class="pill timer" id="timer-badge">00:00</span>
+    <span class="pill hint" id="hint-badge">💡 3</span>
+  </div>
+</header>
+
+<main>
+  <div class="controls">
+    <button class="btn primary" onclick="newGame()">🎲 新遊戲</button>
+    <button class="btn" id="notes-btn" onclick="toggleNotes()">📝 筆記</button>
+    <button class="btn warn" onclick="useHint()">💡 提示</button>
+    <button class="btn success-btn" onclick="checkBoard()">✅ 檢查</button>
+    <select class="btn" id="diff-sel" onchange="changeDiff()">
+      <option value="easy">🟢 初級</option>
+      <option value="medium">🟡 中級</option>
+      <option value="hard">🔴 高級</option>
+    </select>
+  </div>
+
+  <div id="progress-wrap"><div id="progress-bar"></div></div>
+
+  <div id="board-container"><div id="board"></div></div>
+
+  <div id="numpad"></div>
+  <div id="msg"></div>
+</main>
+
+<div id="win-overlay">
+  <div id="win-box">
+    <div class="trophy">🏆</div>
+    <div class="stars" id="win-stars">⭐⭐⭐</div>
+    <h2>完成了！</h2>
+    <p id="win-msg">太棒了！你解開了數獨！</p>
+    <button class="btn primary" style="width:100%;font-size:16px;padding:14px;" onclick="newGame();document.getElementById('win-overlay').classList.remove('show')">🎲 再玩一局</button>
+  </div>
+</div>
+
+<script>
+const PUZZLES = {
+easy:[
+["530070000","600195000","098000060","800060003","400803001","700020006","060000280","000419005","000080079"],
+["200080300","060070084","030500209","000105408","000000000","402706000","301007040","720040060","004010003"],
+["000000907","000420180","000705026","100904060","050000010","060503002","820108000","034059000","507000000"],
+["030050040","008010500","460000012","070502080","000603000","040109030","250000098","001040600","080060020"],
+["020810740","700003100","003457900","800070091","500000003","190030004","007342600","006900008","089016020"],
+["004300209","005009001","070060043","006004780","000905000","019600300","150040700","300200800","208001605"],
+["040100050","070009000","005028000","600050800","200301407","003040005","000640070","000800010","910007040"],
+["630000000","000500008","005674000","000020060","048090520","070050000","000345700","300007000","000000098"],
+["360020089","000361000","000000361","000570230","300000007","025064000","531000000","000415000","870030014"],
+["050000000","200350100","040008006","000400900","004906500","003005000","900700040","001032007","000000050"],
+["049000300","000980000","000600049","900060008","030000020","700090006","580004000","000059000","006000910"],
+["700800000","060030400","005709023","300970080","000000000","080036005","920604800","007080030","000001002"],
+["000060280","709001000","860070100","270080060","003090700","090050038","150030097","000600405","048050000"],
+["080090000","000300070","309000400","040006008","203050601","700200030","008000904","020003000","000010050"],
+["001030070","200900060","530000009","400070002","090805030","800040006","700000093","010007008","060020700"],
+["030080010","007060900","400510023","070000540","600000001","015000080","850091004","009040200","040020060"],
+["000100002","060000070","510000086","620800400","007050300","001006045","180000052","090000010","400002000"],
+["002700000","000400260","040050008","001080600","060000050","003090700","700060030","032005000","000009100"],
+["800000000","003600000","070090200","060005030","500800700","000010040","000040500","000000800","097000600"],
+["500030007","090000020","000400500","060900070","300050001","040006090","002005000","070000060","600080004"],
+["000070010","040903020","002000800","600000001","380050069","700000004","004000300","070309040","060020000"],
+["060050000","000000800","004007590","001500370","000030000","027009100","075400200","008000000","000060040"],
+["032000010","000700400","001030600","300001006","470090051","200600003","008060700","003004000","010000580"],
+["010000000","600040007","000305200","050070001","000200030","800060090","002901000","100080006","000000050"],
+["004900200","010000060","700050003","300008000","056000710","000200004","800060007","040000090","007003100"],
+["870005060","100090400","004600080","090050003","000000000","700040010","040001800","001030007","060900025"],
+["040007800","300080010","007090060","450002000","000705000","000100034","060050900","090070001","003800040"],
+["580000049","000900200","090230060","300007002","000050000","200600008","060043070","007001000","430000015"],
+["009003060","000000200","130960000","000420081","040000030","870031000","000097046","002000000","060300500"],
+["021600000","900050800","000007040","040000051","700090003","310000080","090400000","007060004","000005960"],
+["300200000","006700040","000003900","800050071","060000050","240060003","003900000","070004200","000001007"],
+["000070460","800000072","260800000","000456000","500020004","000819000","000003089","940000005","031090000"],
+["000003007","006700000","170400000","000007084","450000032","920800000","000001073","000004600","800500000"],
+["040000050","008039400","000080063","900400800","020050090","003009002","290010000","007290300","080000030"],
+["102000050","040010006","600905001","200400060","000030000","070006004","900807005","400090030","050000702"],
+["000014070","100030004","070805000","040300090","000090000","090006080","000507040","300040006","060130000"],
+["009006070","500040001","040900030","020000008","804060305","900000020","060001090","800020005","070900100"],
+["600800900","000070006","309000010","900060050","000408000","070020008","030000601","200090000","008004007"],
+["105060000","040001009","006000340","300020000","020304010","000060007","014000900","900800030","000010408"],
+["000080006","014000030","030200000","060040008","300090002","700060010","000002090","040000820","100030000"]
+],
+medium:[
+["800000000","003600000","070090200","060005030","500800700","000010040","000040500","000000800","097000600"],
+["200800000","000370000","050002030","000500000","100006040","006000070","000030500","000200600","018000000"],
+["010920000","700004000","060037800","000080070","005000600","040030000","009270030","000800009","000016070"],
+["006000300","049070000","100006400","000090500","060103080","003060000","008700005","000080960","004000800"],
+["000000907","000420180","000705026","100904060","050000010","060503002","820108000","034059000","507000000"],
+["040100050","070009000","005028000","600050800","200301407","003040005","000640070","000800010","910007040"],
+["800270000","007000400","000056030","600000380","000103000","053000007","080940000","002000100","000031006"],
+["100900030","000040006","053001000","009080500","600050003","007030100","000700960","800010000","090004005"],
+["030800000","900040070","007029040","000900800","040050020","005001000","080390700","020060001","000005030"],
+["000600400","700003006","081000000","003080700","600090005","004050900","000000190","200900003","009001000"],
+["003050000","009000040","046003010","000800000","057060390","000007000","080300270","060000500","000070600"],
+["004000700","170200004","000009030","040050700","800030005","007010040","090600000","500004021","002000900"],
+["000000201","030500060","007030000","000009800","304060900","005300000","000060300","080004020","702000000"],
+["000000000","349200000","000030074","006000002","150000090","700000500","260090000","000001836","000000000"],
+["050006020","009800000","800070036","400000005","000060000","200000008","730050002","000004900","060200040"],
+["640000000","000109000","000006450","020050000","100000009","000040020","018700000","000401000","000000036"],
+["007000003","406050801","008030000","090000100","000306000","005000070","000040200","203090604","600000500"],
+["003900800","000070000","140008000","000060900","306000107","007020000","000400065","000050000","004003900"],
+["080000050","000390000","000054080","007600000","090070030","000001700","040230000","000016000","050000020"],
+["000160008","400050002","000000370","038004060","000000000","060300840","025000000","900040005","800071000"],
+["000050030","400008000","080300005","005090200","030000040","004060700","700002090","000700006","050040000"],
+["000007080","080000600","670005000","001080000","040030050","000060400","000800053","007000020","090100000"],
+["060700000","000030060","009000800","200090000","008000300","000050004","007000900","030070000","000004010"],
+["002340000","100000040","000007060","050900000","000060000","000003080","070600000","030000009","000015400"],
+["000902000","050030070","004000000","000080300","208000704","001060000","000000600","060070090","000803000"]
+],
+hard:[
+["800000000","003600000","070090200","060005030","500800700","000010040","000040500","000000800","097000600"],
+["000006000","059000008","200008001","600030020","003000600","020080007","900400002","800000970","000200000"],
+["000000085","000210009","100300000","500000030","040008000","000700600","010600003","700000200","002000000"],
+["053030000","000600000","600051004","030000200","000070000","000040090","001507000","700000040","000200031"],
+["000700600","700090000","060005000","090000027","800030009","650000040","000800030","000060002","001003000"],
+["000030006","008006200","120000000","000104300","700000500","009805000","000000046","004300900","900060000"],
+["000049300","000000007","070600000","405000030","002000001","060000804","000003010","900000000","003870000"],
+["020000000","000600003","300050010","000306001","040070080","900801000","070090004","600002000","000000090"],
+["000060070","010000008","007004000","500000031","000809000","180000007","000200800","600000050","050090000"],
+["000000000","000003085","007600000","000500070","040100000","050070600","000000030","500400000","000800704"],
+["090000040","000600100","000053000","802000000","050000060","000000701","000730000","003001000","070000080"],
+["000000530","000060800","080500060","600000000","000040000","000000004","020005070","003080000","015000000"]
+]
+};
+
+let board, solution, given, notes, noteMode, selected, hintsLeft, timerInterval, seconds, diff, errorCells;
+
+function parsePuzzle(rows){ return rows.join('').split('').map(Number); }
+
+function solveSudoku(b){
+  const arr=[...b];
+  function ok(pos,n){
+    const r=Math.floor(pos/9),c=pos%9;
+    for(let i=0;i<9;i++) if(arr[r*9+i]===n||arr[i*9+c]===n) return false;
+    const br=Math.floor(r/3)*3,bc=Math.floor(c/3)*3;
+    for(let i=0;i<3;i++) for(let j=0;j<3;j++) if(arr[(br+i)*9+bc+j]===n) return false;
+    return true;
+  }
+  function go(){
+    const p=arr.findIndex(v=>v===0); if(p===-1) return true;
+    for(let n=1;n<=9;n++) if(ok(p,n)){arr[p]=n; if(go()) return true; arr[p]=0;}
+    return false;
+  }
+  go(); return arr;
+}
+
+function newGame(){
+  const pool=PUZZLES[diff];
+  const raw=parsePuzzle(pool[Math.floor(Math.random()*pool.length)]);
+  board=[...raw]; solution=solveSudoku(raw);
+  given=raw.map(v=>v!==0);
+  notes=Array(81).fill(null).map(()=>new Set());
+  errorCells=new Set(); hintsLeft=3; selected=-1; noteMode=false;
+  document.getElementById('notes-btn').textContent='📝 筆記';
+  document.getElementById('notes-btn').classList.remove('active');
+  document.getElementById('hint-badge').textContent=`💡 ${hintsLeft}`;
+  showMsg('','');
+  clearInterval(timerInterval); seconds=0; updateTimer();
+  timerInterval=setInterval(()=>{seconds++;updateTimer();},1000);
+  renderBoard(); updateProgress();
+}
+
+function changeDiff(){
+  diff=document.getElementById('diff-sel').value;
+  const labels={easy:'初級',medium:'中級',hard:'高級'};
+  const badge=document.getElementById('lvl-badge');
+  badge.textContent=labels[diff];
+  badge.className='pill '+({easy:'diff-easy',medium:'diff-medium',hard:'diff-hard'}[diff]);
+  newGame();
+}
+
+function updateTimer(){
+  const m=String(Math.floor(seconds/60)).padStart(2,'0'),s=String(seconds%60).padStart(2,'0');
+  document.getElementById('timer-badge').textContent=`${m}:${s}`;
+}
+
+function updateProgress(){
+  const filled=board.filter((v,i)=>v!==0).length;
+  document.getElementById('progress-bar').style.width=(filled/81*100)+'%';
+}
+
+function renderBoard(){
+  const el=document.getElementById('board'); el.innerHTML='';
+  for(let i=0;i<81;i++){
+    const cell=document.createElement('div');
+    cell.className='cell';
+    const r=Math.floor(i/9),c=i%9;
+    if(c===2||c===5) cell.classList.add('border-right');
+    if(r===2||r===5) cell.classList.add('border-bottom');
+    if(given[i]) cell.classList.add('given');
+    else if(errorCells.has(i)) cell.classList.add('error');
+    else if(board[i]!==0) cell.classList.add('user-input');
+    if(i===selected){
+      cell.classList.add('selected');
+    } else if(selected>=0){
+      const sr=Math.floor(selected/9),sc=selected%9;
+      const inBox=(Math.floor(sr/3)===Math.floor(r/3)&&Math.floor(sc/3)===Math.floor(c/3));
+      if(sr===r||sc===c||inBox) cell.classList.add('highlight');
+      if(board[selected]!==0&&board[i]===board[selected]&&!errorCells.has(i)) cell.classList.add('same-val');
+    }
+    if(board[i]!==0){
+      cell.textContent=board[i];
+    } else if(notes[i].size>0){
+      const ng=document.createElement('div'); ng.className='note-grid';
+      for(let n=1;n<=9;n++){const s=document.createElement('span');s.textContent=notes[i].has(n)?n:'';ng.appendChild(s);}
+      cell.appendChild(ng);
+    }
+    cell.addEventListener('pointerdown',()=>selectCell(i));
+    el.appendChild(cell);
+  }
+}
+
+function selectCell(i){ selected=i; renderBoard(); }
+
+function inputNum(n){
+  if(selected<0) return;
+  if(given[selected]) return;
+  if(n===0){ board[selected]=0; notes[selected].clear(); errorCells.delete(selected); }
+  else if(noteMode){
+    if(board[selected]!==0) return;
+    notes[selected].has(n)?notes[selected].delete(n):notes[selected].add(n);
+  } else {
+    board[selected]=n; notes[selected].clear(); errorCells.delete(selected);
+    if(n!==solution[selected]) errorCells.add(selected);
+    else showMsg('✅ 正確！繼續加油！','success');
+  }
+  renderBoard(); updateProgress(); checkWin();
+}
+
+function checkWin(){
+  if(board.every((v,i)=>v===solution[i])){
+    clearInterval(timerInterval);
+    const m=Math.floor(seconds/60),s=seconds%60;
+    const stars=seconds<120?'⭐⭐⭐':seconds<300?'⭐⭐':'⭐';
+    document.getElementById('win-stars').textContent=stars;
+    document.getElementById('win-msg').textContent=`用時 ${m} 分 ${s} 秒完成！你真的很厲害！`;
+    document.getElementById('win-overlay').classList.add('show');
+  }
+}
+
+function checkBoard(){
+  errorCells=new Set(); let hasErr=false;
+  for(let i=0;i<81;i++) if(!given[i]&&board[i]!==0&&board[i]!==solution[i]){errorCells.add(i);hasErr=true;}
+  if(hasErr) showMsg('❌ 有幾格填錯了，已標示紅色','error');
+  else showMsg('✅ 目前填入的全都正確！','success');
+  renderBoard();
+}
+
+function useHint(){
+  if(hintsLeft<=0){showMsg('提示次數已用完！','error');return;}
+  const empty=[];
+  for(let i=0;i<81;i++) if(!given[i]&&board[i]===0) empty.push(i);
+  if(!empty.length) return;
+  const idx=empty[Math.floor(Math.random()*empty.length)];
+  board[idx]=solution[idx]; notes[idx].clear(); errorCells.delete(idx);
+  hintsLeft--; document.getElementById('hint-badge').textContent=`💡 ${hintsLeft}`;
+  selected=idx; showMsg('💡 已幫你填入一格！','success');
+  renderBoard(); updateProgress(); checkWin();
+}
+
+function toggleNotes(){
+  noteMode=!noteMode;
+  const btn=document.getElementById('notes-btn');
+  btn.textContent=noteMode?'📝 筆記 ON':'📝 筆記';
+  noteMode?btn.classList.add('active'):btn.classList.remove('active');
+}
+
+let msgTimeout;
+function showMsg(text,type){
+  const el=document.getElementById('msg');
+  el.textContent=text; el.className='';
+  if(type) el.classList.add(type);
+  clearTimeout(msgTimeout);
+  if(text) msgTimeout=setTimeout(()=>{el.textContent='';el.className='';},3000);
+}
+
+function buildNumpad(){
+  const pad=document.getElementById('numpad'); pad.innerHTML='';
+  for(let n=1;n<=9;n++){
+    const btn=document.createElement('div'); btn.className='num-btn';
+    btn.textContent=n; btn.addEventListener('pointerdown',()=>inputNum(n));
+    pad.appendChild(btn);
+  }
+  const e=document.createElement('div'); e.className='num-btn erase';
+  e.textContent='✕ 清除'; e.addEventListener('pointerdown',()=>inputNum(0));
+  pad.appendChild(e);
+}
+
+document.addEventListener('keydown',e=>{
+  const n=parseInt(e.key);
+  if(n>=1&&n<=9) inputNum(n);
+  if(e.key==='Backspace'||e.key==='Delete'||e.key==='0') inputNum(0);
+  if(selected<0) return;
+  const moves={ArrowRight:1,ArrowLeft:-1,ArrowDown:9,ArrowUp:-9};
+  if(moves[e.key]!==undefined){
+    e.preventDefault();
+    const ns=selected+moves[e.key];
+    if(ns>=0&&ns<81){
+      if(e.key==='ArrowRight'&&selected%9===8) return;
+      if(e.key==='ArrowLeft'&&selected%9===0) return;
+      selected=ns; renderBoard();
+    }
+  }
+});
+
+diff='easy';
+buildNumpad();
+newGame();
+</script>
+</body>
+</html>
