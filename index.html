@@ -437,6 +437,7 @@ tr:hover td{background:#fafaf8}
 
   <!-- ── PAGE: RESULT ── -->
   <div class="page" id="page-result">
+    <!-- initial empty (no data loaded yet) -->
     <div id="result-empty" class="empty">
       <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/></svg>
       <p>尚無資料，請先上傳出勤 Excel 或連接 EIP</p>
@@ -464,6 +465,11 @@ tr:hover td{background:#fafaf8}
             <tbody id="result-tbody"></tbody>
           </table>
         </div>
+        <!-- search no-result row (stays inside the card so search bar is always visible) -->
+        <div id="result-no-match" style="display:none;padding:32px 0;text-align:center;color:var(--ink3);">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:8px;opacity:.4"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <p style="font-size:12px;">查無符合條件的員工，請修改搜尋條件</p>
+        </div>
       </div>
     </div>
   </div>
@@ -485,7 +491,7 @@ tr:hover td{background:#fafaf8}
           </label>
           <span class="ml-a" style="font-size:11px;color:var(--ink3);font-family:var(--mono);" id="detail-count"></span>
         </div>
-        <div class="tbl-wrap">
+        <div id="detail-tbl-wrap" class="tbl-wrap">
           <table>
             <thead><tr>
               <th>課別</th><th>員工編號</th><th>姓名</th><th>班別</th>
@@ -498,6 +504,10 @@ tr:hover td{background:#fafaf8}
             </tr></thead>
             <tbody id="detail-tbody"></tbody>
           </table>
+        </div>
+        <div id="detail-no-match" style="display:none;padding:32px 0;text-align:center;color:var(--ink3);">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:8px;opacity:.4;display:block;margin-left:auto;margin-right:auto"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <p style="font-size:12px;">查無符合條件的記錄，請修改搜尋條件</p>
         </div>
       </div>
     </div>
@@ -1097,23 +1107,42 @@ function renderResult() {
       document.getElementById('result-data').style.display  = 'none';
       return;
     }
+    // Data is loaded — ALWAYS show result-data so the search bar stays visible
+    document.getElementById('result-empty').style.display = 'none';
+    document.getElementById('result-data').style.display  = 'block';
+
     const q    = (document.getElementById('r-q')?.value||'').toLowerCase();
     const dept = document.getElementById('r-dept')?.value||'';
-    const data = aggregated.filter(r=>(!q||r.name.includes(q)||String(r.empId).includes(q))&&(!dept||r.dept===dept));
-    document.getElementById('result-empty').style.display = data.length?'none':'block';
-    document.getElementById('result-data').style.display  = data.length?'block':'none';
-    document.getElementById('result-count').textContent = `共 ${data.length} 人`;
-    document.getElementById('result-tbody').innerHTML = data.map((r,i)=>`
-      <tr>
-        <td class="mono" style="color:var(--ink3)">${String(i+1).padStart(2,'0')}</td>
-        <td class="mono" style="color:var(--ink3);font-size:11px">${r.empId||'—'}</td>
-        <td>${r.dept}</td>
-        <td class="name-cell">${r.name}</td>
-        <td class="tr accent mono">${r.nightHours.toFixed(1)}</td>
-        <td class="tr mono">${r.overnight}</td>
-        <td class="tr mono" style="color:var(--ink3)">${r.nightCount}</td>
-        <td class="tr">${r.deductH>0?`<span class="pill pill-neg">-${r.deductH.toFixed(1)}</span>`:'<span class="pill pill-dim">—</span>'}</td>
-      </tr>`).join('');
+    const data = aggregated.filter(r =>
+      (!q    || r.name.includes(q) || String(r.empId).includes(q)) &&
+      (!dept || r.dept===dept)
+    );
+
+    const tbody   = document.getElementById('result-tbody');
+    const tblWrap = tbody.closest('.tbl-wrap');
+    const noMatch = document.getElementById('result-no-match');
+
+    if (data.length) {
+      tblWrap.style.display = '';
+      noMatch.style.display = 'none';
+      document.getElementById('result-count').textContent = `共 ${data.length} 人`;
+      tbody.innerHTML = data.map((r,i)=>`
+        <tr>
+          <td class="mono" style="color:var(--ink3)">${String(i+1).padStart(2,'0')}</td>
+          <td class="mono" style="color:var(--ink3);font-size:11px">${r.empId||'—'}</td>
+          <td>${r.dept}</td>
+          <td class="name-cell">${r.name}</td>
+          <td class="tr accent mono">${r.nightHours.toFixed(1)}</td>
+          <td class="tr mono">${r.overnight}</td>
+          <td class="tr mono" style="color:var(--ink3)">${r.nightCount}</td>
+          <td class="tr">${r.deductH>0?`<span class="pill pill-neg">-${r.deductH.toFixed(1)}</span>`:'<span class="pill pill-dim">—</span>'}</td>
+        </tr>`).join('');
+    } else {
+      tblWrap.style.display = 'none';
+      noMatch.style.display = 'block';
+      document.getElementById('result-count').textContent = '查無結果';
+      tbody.innerHTML = '';
+    }
   } catch(e) {
     console.error('renderResult error:', e);
     const tb = document.getElementById('result-tbody');
@@ -1129,44 +1158,58 @@ function renderDetail() {
       document.getElementById('detail-data').style.display  = 'none';
       return;
     }
+    // Data is loaded — ALWAYS show detail-data so the search bar stays visible
+    document.getElementById('detail-empty').style.display = 'none';
+    document.getElementById('detail-data').style.display  = 'block';
+
     const q         = (document.getElementById('d-q')?.value||'').toLowerCase();
     const dept      = document.getElementById('d-dept')?.value||'';
     const shift     = document.getElementById('d-shift')?.value||'';
     const nightOnly = document.getElementById('d-nightonly')?.checked ?? true;
 
-  const data = processed.filter(r =>
-    (!q     || r.name.includes(q) || String(r.empId).includes(q)) &&
-    (!dept  || r.dept===dept) &&
-    (!shift || r.shift===shift) &&
-    (!nightOnly || r.isNight)
-  );
+    const data = processed.filter(r =>
+      (!q        || r.name.includes(q) || String(r.empId).includes(q)) &&
+      (!dept     || r.dept===dept) &&
+      (!shift    || r.shift===shift) &&
+      (!nightOnly|| r.isNight)
+    );
 
-  document.getElementById('detail-empty').style.display = data.length?'none':'block';
-  document.getElementById('detail-data').style.display  = data.length?'block':'none';
-  document.getElementById('detail-count').textContent   = `共 ${data.length} 筆`;
+    const tbody   = document.getElementById('detail-tbody');
+    const tblWrap = document.getElementById('detail-tbl-wrap');
+    const noMatch = document.getElementById('detail-no-match');
 
-  const statusColor = s => {
-    if (!s || s==='正常') return 'color:var(--green)';
-    if (s.includes('異常')) return 'color:var(--red)';
-    return 'color:var(--ink3)';
-  };
+    const statusColor = s => {
+      if (!s || s==='正常') return 'color:var(--green)';
+      if (s.includes('異常')) return 'color:var(--red)';
+      return 'color:var(--ink3)';
+    };
 
-  document.getElementById('detail-tbody').innerHTML = data.map(p=>`
-    <tr>
-      <td>${p.dept}</td>
-      <td class="mono" style="font-size:10px;color:var(--ink3)">${p.empId||'—'}</td>
-      <td class="name-cell">${p.name}</td>
-      <td><span class="pill">${p.shift||'—'}</span></td>
-      <td class="mono" style="font-size:11px;color:var(--ink3)">${p.date||'—'}</td>
-      <td class="mono" style="font-size:11px">${fmtMin(toMin(p.cin))}</td>
-      <td class="mono" style="font-size:11px">${fmtMin(toMin(p.cout))}</td>
-      <td class="mono" style="font-size:10px;color:var(--ink3)">${p.interval}</td>
-      <td class="tr accent mono">${p.nightH.toFixed(1)}</td>
-      <td class="tr">${p.deductH>0?`<span class="pill pill-neg">-${p.deductH.toFixed(1)}</span>`:'<span class="pill pill-dim">—</span>'}</td>
-      <td class="tr mono">${p.overnight}</td>
-      <td style="font-size:11px;color:var(--ink3);max-width:150px;overflow:hidden;text-overflow:ellipsis">${p.note||''}</td>
-      <td style="font-size:10px;font-family:var(--mono);${statusColor(p.status)}">${p.status||''}</td>
-    </tr>`).join('');
+    if (data.length) {
+      tblWrap.style.display = '';
+      noMatch.style.display = 'none';
+      document.getElementById('detail-count').textContent = `共 ${data.length} 筆`;
+      tbody.innerHTML = data.map(p=>`
+        <tr>
+          <td>${p.dept}</td>
+          <td class="mono" style="font-size:10px;color:var(--ink3)">${p.empId||'—'}</td>
+          <td class="name-cell">${p.name}</td>
+          <td><span class="pill">${p.shift||'—'}</span></td>
+          <td class="mono" style="font-size:11px;color:var(--ink3)">${p.date||'—'}</td>
+          <td class="mono" style="font-size:11px">${fmtMin(toMin(p.cin))}</td>
+          <td class="mono" style="font-size:11px">${fmtMin(toMin(p.cout))}</td>
+          <td class="mono" style="font-size:10px;color:var(--ink3)">${p.interval}</td>
+          <td class="tr accent mono">${p.nightH.toFixed(1)}</td>
+          <td class="tr">${p.deductH>0?`<span class="pill pill-neg">-${p.deductH.toFixed(1)}</span>`:'<span class="pill pill-dim">—</span>'}</td>
+          <td class="tr mono">${p.overnight}</td>
+          <td style="font-size:11px;color:var(--ink3);max-width:150px;overflow:hidden;text-overflow:ellipsis">${p.note||''}</td>
+          <td style="font-size:10px;font-family:var(--mono);${statusColor(p.status)}">${p.status||''}</td>
+        </tr>`).join('');
+    } else {
+      tblWrap.style.display = 'none';
+      noMatch.style.display = 'block';
+      document.getElementById('detail-count').textContent = '查無結果';
+      tbody.innerHTML = '';
+    }
   } catch(e) {
     console.error('renderDetail error:', e);
     const tb = document.getElementById('detail-tbody');
