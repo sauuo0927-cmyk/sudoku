@@ -2,606 +2,1615 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>數獨小天才 🧩</title>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Fredoka+One&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>夜點津貼計算系統</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #f0f4ff;
-    --surface: #ffffff;
-    --surface2: #f8faff;
-    --border: #dde3f5;
-    --border-bold: #aab4d8;
-    --accent: #4c6ef5;
-    --accent2: #7950f2;
-    --accent-light: #e8ecff;
-    --green: #37b24d;
-    --green-light: #ebfbee;
-    --red: #f03e3e;
-    --red-light: #fff5f5;
-    --amber: #f59f00;
-    --amber-light: #fff9db;
-    --cell-given: #2c3e7a;
-    --cell-user: #4c6ef5;
-    --cell-error: #f03e3e;
-    --cell-hint: #37b24d;
-    --shadow: 0 4px 24px rgba(76,110,245,0.10);
-    --shadow-sm: 0 2px 8px rgba(76,110,245,0.08);
-    --radius: 16px;
-    --radius-sm: 10px;
-  }
+:root {
+  --ink:#0f1117;--ink2:#3a3d4a;--ink3:#7a7e8e;
+  --paper:#f5f4ef;--white:#fff;
+  --line:rgba(15,17,23,.1);--line2:rgba(15,17,23,.05);
+  --accent:#1a56db;--accent-pale:#e8f0fe;
+  --green:#1a7a4a;--green-pale:#e6f4ec;
+  --amber:#92520a;--amber-pale:#fef3e2;
+  --red:#b91c1c;--red-pale:#fef2f2;
+  --mono:'DM Mono',monospace;--sans:'Noto Sans TC',sans-serif;
+  --r:8px;--r-lg:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);font-size:13px;line-height:1.6;min-height:100vh}
+.shell{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+/* SIDEBAR */
+.sb{background:var(--ink);color:rgba(255,255,255,.85);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sb-brand{padding:22px 18px 18px;border-bottom:1px solid rgba(255,255,255,.08)}
+.brand-row{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.brand-ico{width:28px;height:28px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center}
+.brand-name{font-size:13px;font-weight:700;color:#fff}
+.brand-sub{font-size:9px;color:rgba(255,255,255,.35);font-family:var(--mono);letter-spacing:.1em}
+.sb-sec{padding:14px 10px 6px}
+.sb-lbl{font-size:9px;font-family:var(--mono);color:rgba(255,255,255,.3);letter-spacing:.12em;text-transform:uppercase;padding:0 8px;margin-bottom:4px}
+.nav{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r);cursor:pointer;color:rgba(255,255,255,.55);font-size:12px;transition:all .15s;border:none;background:none;width:100%;text-align:left}
+.nav:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.9)}
+.nav.active{background:var(--accent);color:#fff}
+.sb-foot{margin-top:auto;padding:14px 18px;border-top:1px solid rgba(255,255,255,.08)}
+.sb-chip{display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,.35);padding:3px 0}
+.sb-chip-val{font-family:var(--mono);color:rgba(255,255,255,.75);font-size:11px}
 
-  body {
-    font-family: 'Nunito', sans-serif;
-    background: var(--bg);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 0 0 40px;
-    background-image: radial-gradient(circle at 20% 20%, #e0e7ff 0%, transparent 50%),
-                      radial-gradient(circle at 80% 80%, #f0e6ff 0%, transparent 50%);
-  }
+/* MAIN */
+.topbar{background:var(--white);border-bottom:1px solid var(--line);padding:0 28px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.page-ttl{font-size:14px;font-weight:700;color:var(--ink);letter-spacing:-.3px}
+.topbar-acts{display:flex;gap:8px;align-items:center}
+.content{padding:24px 28px}
 
-  /* HEADER */
-  header {
-    width: 100%;
-    background: var(--surface);
-    border-bottom: 1.5px solid var(--border);
-    padding: 14px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    box-shadow: var(--shadow-sm);
-    position: sticky;
-    top: 0;
-    z-index: 10;
-  }
-  .logo {
-    font-family: 'Fredoka One', cursive;
-    font-size: 26px;
-    color: var(--accent);
-    letter-spacing: 0.5px;
-  }
-  .logo span { color: var(--accent2); }
-  .header-right { display: flex; gap: 8px; align-items: center; }
-  .pill {
-    font-size: 13px;
-    font-weight: 700;
-    padding: 5px 12px;
-    border-radius: 99px;
-    background: var(--accent-light);
-    color: var(--accent);
-    border: 1.5px solid #c5d0ff;
-    white-space: nowrap;
-  }
-  .pill.timer { font-variant-numeric: tabular-nums; min-width: 70px; text-align: center; }
-  .pill.hint { background: var(--amber-light); color: #c07800; border-color: #ffe066; }
+/* CARDS */
+.card{background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);padding:20px 22px;margin-bottom:14px}
+.card-ttl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:16px;font-family:var(--mono)}
 
-  /* MAIN LAYOUT */
-  main {
-    width: 100%;
-    max-width: 540px;
-    padding: 16px 12px 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 14px;
-  }
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--r);font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--line);background:var(--white);color:var(--ink2);font-family:var(--sans);transition:all .15s;white-space:nowrap}
+.btn:hover{background:var(--paper)}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-primary:hover{background:#1648c5}
+.btn-green{background:var(--green);color:#fff;border-color:var(--green)}
+.btn-green:hover{opacity:.9}
+.btn-sm{padding:5px 11px;font-size:11px}
+.btn-xs{padding:3px 8px;font-size:10px}
 
-  /* CONTROLS BAR */
-  .controls {
-    display: flex;
-    gap: 8px;
-    width: 100%;
-    flex-wrap: wrap;
-  }
-  .btn {
-    font-family: 'Nunito', sans-serif;
-    font-size: 14px;
-    font-weight: 700;
-    padding: 10px 16px;
-    border-radius: var(--radius-sm);
-    border: 1.5px solid var(--border);
-    background: var(--surface);
-    color: var(--cell-given);
-    cursor: pointer;
-    transition: all 0.15s;
-    flex: 1;
-    min-width: 0;
-    text-align: center;
-  }
-  .btn:active { transform: scale(0.96); }
-  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .btn.primary:active { background: #3b5bdb; }
-  .btn.warn { background: var(--amber); color: #fff; border-color: var(--amber); }
-  .btn.danger-btn { background: var(--red-light); color: var(--red); border-color: #ffc9c9; }
-  .btn.success-btn { background: var(--green-light); color: var(--green); border-color: #b2f2bb; }
-  .btn.active { background: var(--accent2); color: #fff; border-color: var(--accent2); }
-  select.btn {
-    appearance: none;
-    -webkit-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234c6ef5' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 10px center;
-    padding-right: 28px;
-  }
+/* DROPZONE */
+.dz{border:1.5px dashed rgba(15,17,23,.18);border-radius:var(--r-lg);padding:36px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--paper)}
+.dz:hover,.dz.over{border-color:var(--accent);background:var(--accent-pale)}
+.dz p{color:var(--ink3);font-size:12px;margin-top:8px}
+.dz strong{color:var(--accent)}
 
-  /* BOARD */
-  #board-container {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-  }
-  #board {
-    display: grid;
-    grid-template-columns: repeat(9, 1fr);
-    border: 3px solid var(--cell-given);
-    border-radius: 12px;
-    overflow: hidden;
-    width: 100%;
-    max-width: 460px;
-    aspect-ratio: 1;
-    background: var(--border-bold);
-    gap: 1px;
-    box-shadow: var(--shadow);
-  }
-  .cell {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'Nunito', sans-serif;
-    font-size: clamp(15px, 4vw, 24px);
-    font-weight: 700;
-    cursor: pointer;
-    background: var(--surface);
-    color: var(--cell-given);
-    transition: background 0.1s;
-    user-select: none;
-    position: relative;
-    aspect-ratio: 1;
-  }
-  .cell.given { color: var(--cell-given); font-weight: 900; }
-  .cell.user-input { color: var(--cell-user); }
-  .cell.error { color: var(--cell-error) !important; background: var(--red-light) !important; }
-  .cell.hint-cell { color: var(--cell-hint) !important; background: var(--green-light) !important; }
-  .cell.selected { background: #dde3ff !important; }
-  .cell.same-val { background: #e8ecff; }
-  .cell.highlight { background: var(--surface2); }
-  .cell.border-right { border-right: 2.5px solid var(--cell-given) !important; }
-  .cell.border-bottom { border-bottom: 2.5px solid var(--cell-given) !important; }
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.stat{background:var(--paper);border-radius:var(--r);padding:12px 14px;border:1px solid var(--line2)}
+.stat-lbl{font-size:9px;color:var(--ink3);font-family:var(--mono);letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px}
+.stat-val{font-size:20px;font-weight:700;color:var(--ink);letter-spacing:-1px}
+.stat-unit{font-size:10px;color:var(--ink3);font-weight:400;margin-left:2px}
 
-  .note-grid {
-    display: grid;
-    grid-template-columns: repeat(3,1fr);
-    grid-template-rows: repeat(3,1fr);
-    width: 100%;
-    height: 100%;
-    padding: 2px;
-  }
-  .note-grid span {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: clamp(5px, 1.3vw, 9px);
-    font-weight: 600;
-    color: var(--accent2);
-    line-height: 1;
-  }
+/* TABLE */
+.tbl-wrap{border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead{background:var(--paper)}
+th{padding:9px 13px;text-align:left;font-size:9px;font-family:var(--mono);font-weight:500;color:var(--ink3);letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{color:var(--ink)}
+td{padding:8px 13px;border-bottom:1px solid var(--line2);color:var(--ink2);font-size:12px;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafaf8}
+.tr{text-align:right}.mono{font-family:var(--mono)}
+.accent{color:var(--accent);font-weight:700;font-size:13px}
+.name-cell{font-weight:500;color:var(--ink)}
 
-  /* NUMPAD */
-  #numpad {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 10px;
-    width: 100%;
-    max-width: 460px;
-  }
-  .num-btn {
-    font-family: 'Fredoka One', cursive;
-    font-size: clamp(20px, 6vw, 32px);
-    padding: 16px 0;
-    border-radius: var(--radius-sm);
-    border: 2px solid var(--border);
-    background: var(--surface);
-    color: var(--cell-given);
-    cursor: pointer;
-    text-align: center;
-    box-shadow: var(--shadow-sm);
-    transition: all 0.12s;
-    user-select: none;
-  }
-  .num-btn:active { transform: scale(0.93); box-shadow: none; }
-  .num-btn:hover { background: var(--accent-light); border-color: #b0c0ff; }
-  .num-btn.erase { color: var(--red); font-size: clamp(16px,4.5vw,24px); font-family: 'Nunito', sans-serif; font-weight: 800; }
+/* BADGE / PILL */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:500;font-family:var(--mono)}
+.badge-green{background:var(--green-pale);color:var(--green)}
+.badge-amber{background:var(--amber-pale);color:var(--amber)}
+.badge-red{background:var(--red-pale);color:var(--red)}
+.badge-blue{background:var(--accent-pale);color:var(--accent)}
+.pill{display:inline-block;padding:1px 7px;border-radius:4px;font-size:10px;font-family:var(--mono);background:var(--paper);border:1px solid var(--line);color:var(--ink2)}
+.pill-neg{background:var(--red-pale);color:var(--red);border-color:rgba(185,28,28,.15)}
+.pill-dim{opacity:.3}
 
-  /* MESSAGE */
-  #msg {
-    font-size: 15px;
-    font-weight: 700;
-    min-height: 32px;
-    text-align: center;
-    padding: 6px 16px;
-    border-radius: 99px;
-    background: transparent;
-    color: var(--accent);
-    transition: all 0.3s;
-  }
-  #msg.error { background: var(--red-light); color: var(--red); }
-  #msg.success { background: var(--green-light); color: var(--green); }
+/* LOG */
+.log{background:#0f1117;border-radius:var(--r);padding:12px 14px;font-family:var(--mono);font-size:10px;max-height:140px;overflow-y:auto;border:1px solid var(--line)}
+.ll{padding:1px 0;line-height:1.6}
+.ll.ok{color:#4ade80}.ll.err{color:#f87171}.ll.warn{color:#fbbf24}.ll.info{color:#60a5fa}.ll.dim{color:rgba(255,255,255,.3)}
 
-  /* PROGRESS BAR */
-  #progress-wrap {
-    width: 100%;
-    max-width: 460px;
-    height: 8px;
-    background: var(--border);
-    border-radius: 99px;
-    overflow: hidden;
-  }
-  #progress-bar {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-    border-radius: 99px;
-    transition: width 0.4s;
-    width: 0%;
-  }
+/* PROGRESS */
+.prog{height:3px;background:var(--line2);border-radius:2px;overflow:hidden;margin-top:10px}
+.prog-bar{height:100%;background:var(--accent);border-radius:2px;transition:width .4s ease}
 
-  /* WIN OVERLAY */
-  #win-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(30,30,60,0.55);
-    align-items: center;
-    justify-content: center;
-    z-index: 100;
-    backdrop-filter: blur(4px);
-  }
-  #win-overlay.show { display: flex; }
-  #win-box {
-    background: var(--surface);
-    border-radius: 24px;
-    padding: 36px 32px;
-    text-align: center;
-    max-width: 340px;
-    width: 90%;
-    box-shadow: 0 20px 60px rgba(76,110,245,0.2);
-    animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
-  }
-  @keyframes popIn { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-  #win-box .trophy { font-size: 64px; margin-bottom: 8px; }
-  #win-box h2 { font-family: 'Fredoka One', cursive; font-size: 32px; color: var(--accent); margin-bottom: 8px; }
-  #win-box p { font-size: 16px; color: #666; margin-bottom: 24px; line-height: 1.6; }
-  .stars { font-size: 32px; margin-bottom: 12px; letter-spacing: 4px; }
+/* FILTER */
+.frow{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.frow input,.frow select{padding:6px 10px;border:1px solid var(--line);border-radius:var(--r);background:var(--white);color:var(--ink);font-size:12px;outline:none;font-family:var(--sans)}
+.frow input:focus,.frow select:focus{border-color:var(--accent)}
+.ml-a{margin-left:auto}
 
-  /* DIFFICULTY BADGES */
-  .diff-easy { background: var(--green-light); color: var(--green); border-color: #b2f2bb; }
-  .diff-medium { background: var(--amber-light); color: #c07800; border-color: #ffe066; }
-  .diff-hard { background: var(--red-light); color: var(--red); border-color: #ffc9c9; }
+/* PAGE/TAB */
+.page{display:none}
+.page.active{display:block}
+.empty{padding:60px 20px;text-align:center;color:var(--ink3)}
+.empty p{font-size:12px;margin-top:12px}
 
-  @media (max-width: 400px) {
-    .logo { font-size: 20px; }
-    .pill { font-size: 12px; padding: 4px 8px; }
-    .controls { gap: 6px; }
-    .btn { font-size: 12px; padding: 8px 10px; }
-  }
+/* FIELD MAP TABLE */
+.fmap-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.fmap-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--line2);font-size:12px}
+.fmap-row:last-child{border-bottom:none}
+.fmap-key{font-family:var(--mono);font-size:11px;color:var(--ink3)}
+.fmap-val{font-family:var(--mono);font-size:11px;font-weight:500}
+.fmap-val.ok{color:var(--green)}
+.fmap-val.warn{color:var(--amber)}
+.chip{background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:1px 7px;font-size:10px;font-family:var(--mono)}
+
+/* EIP */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:10px;font-weight:500;color:var(--ink2);font-family:var(--mono);letter-spacing:.03em}
+.field input,.field select{padding:7px 10px;border:1px solid var(--line);border-radius:var(--r);background:var(--paper);color:var(--ink);font-size:12px;font-family:var(--sans);outline:none}
+.field input:focus,.field select:focus{border-color:var(--accent);background:var(--white)}
+.form-full{grid-column:1/-1}
+.conn-bar{display:flex;align-items:center;gap:8px;padding:9px 13px;background:var(--paper);border:1px solid var(--line);border-radius:var(--r);margin-bottom:14px}
+.cdot{width:7px;height:7px;border-radius:50%;background:var(--ink3)}
+.cdot.ok{background:#22c55e}.cdot.err{background:var(--red)}.cdot.ping{background:#f59e0b;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* SHIFT CONFIG */
+.shift-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line2);font-size:12px}
+.shift-row:last-child{border-bottom:none}
+
+/* DASHBOARD */
+.dash-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.kpi{background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px 20px;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--kpi-color,var(--accent))}
+.kpi-label{font-size:10px;font-family:var(--mono);color:var(--ink3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+.kpi-value{font-size:26px;font-weight:700;color:var(--ink);letter-spacing:-1.5px;line-height:1}
+.kpi-unit{font-size:12px;color:var(--ink3);font-weight:400;margin-left:3px}
+.kpi-sub{font-size:11px;color:var(--ink3);margin-top:6px}
+.kpi-trend{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-family:var(--mono);padding:2px 7px;border-radius:20px;margin-top:6px}
+.trend-up{background:var(--green-pale);color:var(--green)}
+.trend-dn{background:var(--red-pale);color:var(--red)}
+
+.dash-row{display:grid;gap:14px;margin-bottom:14px}
+.dash-row-2{grid-template-columns:1fr 1fr}
+.dash-row-3{grid-template-columns:2fr 1fr 1fr}
+.dash-row-half{grid-template-columns:3fr 2fr}
+
+.chart-card{background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px 20px}
+.chart-ttl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:4px;font-family:var(--mono)}
+.chart-sub{font-size:11px;color:var(--ink3);margin-bottom:16px}
+.chart-wrap{position:relative}
+
+/* RANKING LIST */
+.rank-list{list-style:none}
+.rank-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line2)}
+.rank-item:last-child{border-bottom:none}
+.rank-num{font-family:var(--mono);font-size:10px;color:var(--ink3);min-width:18px;text-align:right}
+.rank-name{font-size:12px;font-weight:500;flex:1;color:var(--ink)}
+.rank-dept{font-size:10px;color:var(--ink3)}
+.rank-bar-wrap{width:80px;height:5px;background:var(--line2);border-radius:3px;overflow:hidden}
+.rank-bar{height:100%;background:var(--accent);border-radius:3px;transition:width .6s ease}
+.rank-val{font-family:var(--mono);font-size:11px;color:var(--accent);font-weight:500;min-width:36px;text-align:right}
+
+/* DEPT BAR */
+.dept-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line2)}
+.dept-row:last-child{border-bottom:none}
+.dept-name{font-size:11px;min-width:110px;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dept-bar-wrap{flex:1;height:8px;background:var(--line2);border-radius:4px;overflow:hidden}
+.dept-bar{height:100%;border-radius:4px;transition:width .6s ease}
+.dept-val{font-family:var(--mono);font-size:11px;min-width:44px;text-align:right;color:var(--ink2)}
+
+/* LEAVE TYPE PIE legend */
+.legend-list{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.legend-item{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink2)}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.legend-pct{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--ink3)}
+
+/* HEATMAP */
+.heatmap-grid{display:grid;gap:3px}
+.hm-cell{border-radius:3px;height:22px;display:flex;align-items:center;justify-content:center;font-size:9px;font-family:var(--mono);color:var(--ink3);cursor:default;transition:opacity .15s}
+.hm-cell:hover{opacity:.8}
+.hm-label{font-size:9px;font-family:var(--mono);color:var(--ink3);text-align:center}
 </style>
 </head>
 <body>
+<div class="shell">
 
-<header>
-  <div class="logo">數獨<span>小天才</span> 🧩</div>
-  <div class="header-right">
-    <span class="pill" id="lvl-badge">初級</span>
-    <span class="pill timer" id="timer-badge">00:00</span>
-    <span class="pill hint" id="hint-badge">💡 3</span>
+<!-- SIDEBAR -->
+<aside class="sb">
+  <div class="sb-brand">
+    <div class="brand-row">
+      <div class="brand-ico">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      </div>
+      <span class="brand-name">夜點津貼系統</span>
+    </div>
+    <div class="brand-sub">NIGHT ALLOWANCE v5.0</div>
   </div>
-</header>
+  <div class="sb-sec">
+    <div class="sb-lbl">資料來源</div>
+    <button class="nav active" onclick="gotoPage('upload',this)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      上傳 Excel / CSV
+    </button>
+    <button class="nav" onclick="gotoPage('eip',this)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      EIP 系統串接
+    </button>
+  </div>
+  <div class="sb-sec">
+    <div class="sb-lbl">報表</div>
+    <button class="nav" onclick="gotoPage('dash',this)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      數據儀表板
+    </button>
+    <button class="nav" onclick="gotoPage('result',this)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/></svg>
+      加總報表
+    </button>
+    <button class="nav" onclick="gotoPage('detail',this)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      明細查詢
+    </button>
+  </div>
+  <div class="sb-sec">
+    <div class="sb-lbl">設定</div>
+    <button class="nav" onclick="gotoPage('config',this)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14"/></svg>
+      班別 & 欄位設定
+    </button>
+  </div>
+  <div class="sb-foot">
+    <div class="sb-chip"><span>員工人數</span><span class="sb-chip-val" id="sb-emp">—</span></div>
+    <div class="sb-chip"><span>資料筆數</span><span class="sb-chip-val" id="sb-rows">—</span></div>
+    <div class="sb-chip"><span>總夜點時數</span><span class="sb-chip-val" id="sb-total">—</span></div>
+  </div>
+</aside>
 
-<main>
-  <div class="controls">
-    <button class="btn primary" onclick="newGame()">🎲 新遊戲</button>
-    <button class="btn" id="notes-btn" onclick="toggleNotes()">📝 筆記</button>
-    <button class="btn warn" onclick="useHint()">💡 提示</button>
-    <button class="btn success-btn" onclick="checkBoard()">✅ 檢查</button>
-    <select class="btn" id="diff-sel" onchange="changeDiff()">
-      <option value="easy">🟢 初級</option>
-      <option value="medium">🟡 中級</option>
-      <option value="hard">🔴 高級</option>
-    </select>
+<!-- MAIN -->
+<div>
+  <div class="topbar">
+    <div class="page-ttl" id="page-ttl">上傳 Excel / CSV</div>
+    <div class="topbar-acts">
+      <button class="btn btn-sm" onclick="loadDemo()">載入示範資料</button>
+      <button class="btn btn-sm btn-green" id="btn-export" onclick="exportExcel()" disabled>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        匯出 Excel
+      </button>
+    </div>
   </div>
 
-  <div id="progress-wrap"><div id="progress-bar"></div></div>
+  <div class="content">
 
-  <div id="board-container"><div id="board"></div></div>
+  <!-- ── PAGE: UPLOAD ── -->
+  <div class="page active" id="page-upload">
+    <div class="card">
+      <div class="card-ttl">上傳出勤資料</div>
+      <div class="dz" id="dz" onclick="document.getElementById('fi').click()">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--ink3)" stroke-width="1.5">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+        </svg>
+        <p>拖曳或點選上傳 <strong>Excel (.xlsx) / CSV</strong></p>
+        <p>自動支援多 Sheet，全頁面遍歷後依姓名合併計算</p>
+        <input type="file" id="fi" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleFile(event)">
+      </div>
+      <div id="upload-status" style="display:none;margin-top:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <span style="font-size:11px;font-family:var(--mono);color:var(--ink2);" id="upload-fname"></span>
+          <span class="badge badge-blue" id="upload-badge">處理中</span>
+        </div>
+        <div class="prog"><div class="prog-bar" id="prog-bar" style="width:0%"></div></div>
+      </div>
+    </div>
 
-  <div id="numpad"></div>
-  <div id="msg"></div>
-</main>
+    <!-- Field mapping status -->
+    <div class="card" id="fmap-card" style="display:none;">
+      <div class="card-ttl">偵測到的欄位對應</div>
+      <div class="fmap-grid">
+        <div>
+          <div class="fmap-row"><span class="fmap-key">姓名欄</span><span class="fmap-val ok" id="fm-name">—</span></div>
+          <div class="fmap-row"><span class="fmap-key">課別/部門欄</span><span class="fmap-val ok" id="fm-dept">—</span></div>
+          <div class="fmap-row"><span class="fmap-key">班別欄</span><span class="fmap-val ok" id="fm-shift">—</span></div>
+        </div>
+        <div>
+          <div class="fmap-row"><span class="fmap-key">實際出勤欄</span><span class="fmap-val ok" id="fm-cin">—</span></div>
+          <div class="fmap-row"><span class="fmap-key">實際退勤欄</span><span class="fmap-val ok" id="fm-cout">—</span></div>
+          <div class="fmap-row"><span class="fmap-key">備註欄</span><span class="fmap-val ok" id="fm-note">—</span></div>
+        </div>
+      </div>
+      <div style="margin-top:14px;padding:10px 12px;background:var(--paper);border-radius:var(--r);border:1px solid var(--line);">
+        <div style="font-size:10px;color:var(--ink3);font-family:var(--mono);margin-bottom:6px;">時間欄位偵測格式</div>
+        <div id="time-fmt-info" style="font-size:11px;color:var(--ink2);font-family:var(--mono);"></div>
+      </div>
+    </div>
 
-<div id="win-overlay">
-  <div id="win-box">
-    <div class="trophy">🏆</div>
-    <div class="stars" id="win-stars">⭐⭐⭐</div>
-    <h2>完成了！</h2>
-    <p id="win-msg">太棒了！你解開了數獨！</p>
-    <button class="btn primary" style="width:100%;font-size:16px;padding:14px;" onclick="newGame();document.getElementById('win-overlay').classList.remove('show')">🎲 再玩一局</button>
+    <div class="card" style="padding-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="card-ttl" style="margin-bottom:0">系統日誌</div>
+        <button class="btn btn-xs" onclick="document.getElementById('log').innerHTML=''">清除</button>
+      </div>
+      <div class="log" id="log"><div class="ll dim">系統就緒。請上傳出勤資料。</div></div>
+    </div>
   </div>
-</div>
+
+  <!-- ── PAGE: EIP ── -->
+  <div class="page" id="page-eip">
+    <div class="card">
+      <div class="card-ttl">EIP 系統連線設定</div>
+      <div class="conn-bar">
+        <span class="cdot" id="eip-dot"></span>
+        <span style="font-size:12px;color:var(--ink2);" id="eip-lbl">尚未連線</span>
+        <span style="font-size:10px;font-family:var(--mono);color:var(--ink3);margin-left:auto;" id="eip-detail"></span>
+      </div>
+      <div class="form-grid" style="margin-bottom:12px;">
+        <div class="field"><label>EIP 系統網址</label><input type="url" id="f-url" placeholder="https://eip.company.com"></div>
+        <div class="field"><label>API 路徑</label><input type="text" id="f-path" value="/api/attendance"></div>
+        <div class="field"><label>帳號</label><input type="text" id="f-user" placeholder="employee_id"></div>
+        <div class="field"><label>密碼 / Token</label><input type="password" id="f-pass" placeholder="••••••••"></div>
+        <div class="field"><label>驗證方式</label>
+          <select id="f-auth">
+            <option value="basic">HTTP Basic Auth</option>
+            <option value="bearer">Bearer Token</option>
+            <option value="apikey">API Key Header</option>
+          </select>
+        </div>
+        <div class="field"><label>查詢月份</label><input type="month" id="f-month"></div>
+        <div class="field form-full"><label>自訂 Header（JSON，選填）</label><input type="text" id="f-hdrs" placeholder='{"X-Token":"abc"}'></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:18px;">
+        <button class="btn btn-primary btn-sm" onclick="connectEIP()">連接並抓取</button>
+        <button class="btn btn-sm" onclick="testEIP()">測試連線</button>
+        <button class="btn btn-sm" onclick="saveEIP()">儲存設定</button>
+        <span id="eip-spin" style="display:none;font-size:10px;font-family:var(--mono);color:var(--ink3);align-self:center;">● 連線中...</span>
+      </div>
+      <div style="background:var(--amber-pale);border:1px solid rgba(146,82,10,.15);border-radius:var(--r);padding:12px 14px;font-size:11px;color:var(--amber);line-height:1.8;">
+        <strong>CORS 限制：</strong>瀏覽器安全政策限制跨域存取。解法：A. 請 IT 在 EIP 加入 CORS 標頭　B. 設本地反向代理　C. 從 EIP 匯出 xlsx 後直接上傳（最快）
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAGE: DASHBOARD ── -->
+  <div class="page" id="page-dash">
+    <div id="dash-empty" class="empty">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      <p>尚無資料，請先上傳出勤 Excel 或連接 EIP</p>
+    </div>
+    <div id="dash-data" style="display:none;">
+
+      <!-- KPI row -->
+      <div class="dash-kpi-grid" id="dash-kpis"></div>
+
+      <!-- Row 1: 夜點時數橫條圖 + 跨夜排名 -->
+      <div class="dash-row dash-row-half" style="margin-bottom:14px;">
+        <div class="chart-card">
+          <div class="chart-ttl">各員工夜點時數排名</div>
+          <div class="chart-sub">依夜點時數由高至低排序，前 15 名</div>
+          <div class="chart-wrap" style="height:320px;"><canvas id="chart-bar"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-ttl">Top 10 夜點排行榜</div>
+          <div class="chart-sub">夜點時數最高員工</div>
+          <ul class="rank-list" id="rank-list"></ul>
+        </div>
+      </div>
+
+      <!-- Row 2: 課別圓餅 + 假別分布 + 班別分布 -->
+      <div class="dash-row dash-row-3" style="margin-bottom:14px;">
+        <div class="chart-card">
+          <div class="chart-ttl">課別夜點時數分布</div>
+          <div class="chart-sub">各課別佔總夜點時數比例</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:center;">
+            <div class="chart-wrap" style="height:180px;"><canvas id="chart-dept-pie"></canvas></div>
+            <div id="dept-legend" class="legend-list"></div>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-ttl">假別扣除分布</div>
+          <div class="chart-sub">各假別影響時數</div>
+          <div class="chart-wrap" style="height:160px;"><canvas id="chart-leave-pie"></canvas></div>
+          <div id="leave-legend" class="legend-list"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-ttl">班別出勤人次</div>
+          <div class="chart-sub">各班別使用次數</div>
+          <div class="chart-wrap" style="height:200px;"><canvas id="chart-shift-doughnut"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Row 3: 課別橫條 + 跨夜分布 -->
+      <div class="dash-row dash-row-2" style="margin-bottom:14px;">
+        <div class="chart-card">
+          <div class="chart-ttl">課別夜點時數比較</div>
+          <div class="chart-sub">含員工人數與平均值</div>
+          <div id="dept-bar-list" style="margin-top:4px;"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-ttl">夜點時數分布直方圖</div>
+          <div class="chart-sub">員工夜點時數落點分布</div>
+          <div class="chart-wrap" style="height:200px;"><canvas id="chart-hist"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Row 4: scatter plot + overnight by dept -->
+      <div class="dash-row dash-row-2">
+        <div class="chart-card">
+          <div class="chart-ttl">夜點時數 vs 跨夜天數</div>
+          <div class="chart-sub">每個點代表一位員工</div>
+          <div class="chart-wrap" style="height:220px;"><canvas id="chart-scatter"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-ttl">各課別跨夜天數</div>
+          <div class="chart-sub">跨夜值班負擔分析</div>
+          <div class="chart-wrap" style="height:220px;"><canvas id="chart-overnight-bar"></canvas></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── PAGE: RESULT ── -->
+  <div class="page" id="page-result">
+    <div id="result-empty" class="empty">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="2"/></svg>
+      <p>尚無資料，請先上傳出勤 Excel 或連接 EIP</p>
+    </div>
+    <div id="result-data" style="display:none;">
+      <div class="stats-row" id="stats-row"></div>
+      <div class="card" style="padding:16px 18px;">
+        <div class="frow">
+          <input placeholder="搜尋姓名..." id="r-q" oninput="renderResult()">
+          <select id="r-dept" onchange="renderResult()"><option value="">全部課別</option></select>
+          <span class="ml-a" style="font-size:11px;color:var(--ink3);font-family:var(--mono);" id="result-count"></span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th onclick="sort('rank')">#</th>
+              <th onclick="sort('empId')">員工編號</th>
+              <th onclick="sort('dept')">課別</th>
+              <th onclick="sort('name')">姓名</th>
+              <th onclick="sort('nightHours')" class="tr">夜點時數（hr）</th>
+              <th onclick="sort('overnight')" class="tr">跨夜天數</th>
+              <th onclick="sort('nightCount')" class="tr">夜班筆數</th>
+              <th class="tr">假扣除（hr）</th>
+            </tr></thead>
+            <tbody id="result-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAGE: DETAIL ── -->
+  <div class="page" id="page-detail">
+    <div id="detail-empty" class="empty">
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <p>尚無資料</p>
+    </div>
+    <div id="detail-data" style="display:none;">
+      <div class="card" style="padding:16px 18px;">
+        <div class="frow">
+          <input placeholder="搜尋姓名/編號..." id="d-q" oninput="renderDetail()">
+          <select id="d-dept" onchange="renderDetail()"><option value="">全部課別</option></select>
+          <select id="d-shift" onchange="renderDetail()"><option value="">全部班別</option></select>
+          <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink2);cursor:pointer;">
+            <input type="checkbox" id="d-nightonly" checked onchange="renderDetail()"> 僅顯示夜班
+          </label>
+          <span class="ml-a" style="font-size:11px;color:var(--ink3);font-family:var(--mono);" id="detail-count"></span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>課別</th><th>員工編號</th><th>姓名</th><th>班別</th>
+              <th>出勤日</th><th>實際出勤</th><th>實際退勤</th>
+              <th>夜點區間</th>
+              <th class="tr">夜點時數</th>
+              <th class="tr">假扣除</th>
+              <th class="tr">跨夜</th>
+              <th>備註</th><th>狀態</th>
+            </tr></thead>
+            <tbody id="detail-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAGE: CONFIG ── -->
+  <div class="page" id="page-config">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div class="card">
+        <div class="card-ttl">欄位對應設定（您的 Excel 格式）</div>
+        <div style="font-size:11px;color:var(--ink3);margin-bottom:12px;">系統已自動偵測並支援以下欄位名稱：</div>
+        <div id="col-map-list"></div>
+        <div style="margin-top:14px;padding:10px 12px;background:var(--accent-pale);border-radius:var(--r);font-size:11px;color:var(--accent);line-height:1.7;">
+          <strong>新格式欄位（出勤紀錄_20260416.xlsx）：</strong><br>
+          員工編號 / 員工姓名 / 部門 / 班別名稱 / 檢核狀態 / 出勤日 / 實際出勤 / 實際退勤 / 遲到 / 早退 / 曠職 / 備註<br>
+          <strong>班別格式：</strong>上班HHMM-HHMM（含前綴，自動去除）｜休假HHMM-HHMM（夜點歸零）<br>
+          <strong>備註空值：</strong>\xa0（不斷行空格，自動過濾）
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-ttl">班別對照表</div>
+        <div id="shift-list"></div>
+        <div style="margin-top:12px;display:flex;gap:8px;">
+          <input id="new-shift" placeholder="HHMM-HHMM" style="flex:1;padding:6px 10px;border:1px solid var(--line);border-radius:var(--r);font-size:11px;font-family:var(--mono);background:var(--paper);color:var(--ink);outline:none;">
+          <button class="btn btn-sm btn-primary" onclick="addShift()">新增</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-ttl">計算規則</div>
+        <div style="font-size:11px;line-height:2.2;color:var(--ink2);">
+          <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--line2);">
+            <span style="color:var(--ink3);font-family:var(--mono);">夜點有效區間</span><span style="font-family:var(--mono);">22:00 ~ 07:00</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--line2);">
+            <span style="color:var(--ink3);font-family:var(--mono);">請假扣除範圍</span><span style="font-family:var(--mono);">特休 / 事假 / 病假 / 生理假（全部假別）</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--line2);">
+            <span style="color:var(--ink3);font-family:var(--mono);">備註時間格式</span><span style="font-family:var(--mono);">假別HHMM~HHMM（可無空格）</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--line2);">
+            <span style="color:var(--ink3);font-family:var(--mono);">跨夜排除班別</span><span style="font-family:var(--mono);">14xx, 15xx 開頭</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:3px 0;">
+            <span style="color:var(--ink3);font-family:var(--mono);">跨夜判定門檻</span><span style="font-family:var(--mono);">實際退勤 &gt; 隔日 00:30</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /shell -->
 
 <script>
-const PUZZLES = {
-easy:[
-["530070000","600195000","098000060","800060003","400803001","700020006","060000280","000419005","000080079"],
-["200080300","060070084","030500209","000105408","000000000","402706000","301007040","720040060","004010003"],
-["000000907","000420180","000705026","100904060","050000010","060503002","820108000","034059000","507000000"],
-["030050040","008010500","460000012","070502080","000603000","040109030","250000098","001040600","080060020"],
-["020810740","700003100","003457900","800070091","500000003","190030004","007342600","006900008","089016020"],
-["004300209","005009001","070060043","006004780","000905000","019600300","150040700","300200800","208001605"],
-["040100050","070009000","005028000","600050800","200301407","003040005","000640070","000800010","910007040"],
-["630000000","000500008","005674000","000020060","048090520","070050000","000345700","300007000","000000098"],
-["360020089","000361000","000000361","000570230","300000007","025064000","531000000","000415000","870030014"],
-["050000000","200350100","040008006","000400900","004906500","003005000","900700040","001032007","000000050"],
-["049000300","000980000","000600049","900060008","030000020","700090006","580004000","000059000","006000910"],
-["700800000","060030400","005709023","300970080","000000000","080036005","920604800","007080030","000001002"],
-["000060280","709001000","860070100","270080060","003090700","090050038","150030097","000600405","048050000"],
-["080090000","000300070","309000400","040006008","203050601","700200030","008000904","020003000","000010050"],
-["001030070","200900060","530000009","400070002","090805030","800040006","700000093","010007008","060020700"],
-["030080010","007060900","400510023","070000540","600000001","015000080","850091004","009040200","040020060"],
-["000100002","060000070","510000086","620800400","007050300","001006045","180000052","090000010","400002000"],
-["002700000","000400260","040050008","001080600","060000050","003090700","700060030","032005000","000009100"],
-["800000000","003600000","070090200","060005030","500800700","000010040","000040500","000000800","097000600"],
-["500030007","090000020","000400500","060900070","300050001","040006090","002005000","070000060","600080004"],
-["000070010","040903020","002000800","600000001","380050069","700000004","004000300","070309040","060020000"],
-["060050000","000000800","004007590","001500370","000030000","027009100","075400200","008000000","000060040"],
-["032000010","000700400","001030600","300001006","470090051","200600003","008060700","003004000","010000580"],
-["010000000","600040007","000305200","050070001","000200030","800060090","002901000","100080006","000000050"],
-["004900200","010000060","700050003","300008000","056000710","000200004","800060007","040000090","007003100"],
-["870005060","100090400","004600080","090050003","000000000","700040010","040001800","001030007","060900025"],
-["040007800","300080010","007090060","450002000","000705000","000100034","060050900","090070001","003800040"],
-["580000049","000900200","090230060","300007002","000050000","200600008","060043070","007001000","430000015"],
-["009003060","000000200","130960000","000420081","040000030","870031000","000097046","002000000","060300500"],
-["021600000","900050800","000007040","040000051","700090003","310000080","090400000","007060004","000005960"],
-["300200000","006700040","000003900","800050071","060000050","240060003","003900000","070004200","000001007"],
-["000070460","800000072","260800000","000456000","500020004","000819000","000003089","940000005","031090000"],
-["000003007","006700000","170400000","000007084","450000032","920800000","000001073","000004600","800500000"],
-["040000050","008039400","000080063","900400800","020050090","003009002","290010000","007290300","080000030"],
-["102000050","040010006","600905001","200400060","000030000","070006004","900807005","400090030","050000702"],
-["000014070","100030004","070805000","040300090","000090000","090006080","000507040","300040006","060130000"],
-["009006070","500040001","040900030","020000008","804060305","900000020","060001090","800020005","070900100"],
-["600800900","000070006","309000010","900060050","000408000","070020008","030000601","200090000","008004007"],
-["105060000","040001009","006000340","300020000","020304010","000060007","014000900","900800030","000010408"],
-["000080006","014000030","030200000","060040008","300090002","700060010","000002090","040000820","100030000"]
-],
-medium:[
-["800000000","003600000","070090200","060005030","500800700","000010040","000040500","000000800","097000600"],
-["200800000","000370000","050002030","000500000","100006040","006000070","000030500","000200600","018000000"],
-["010920000","700004000","060037800","000080070","005000600","040030000","009270030","000800009","000016070"],
-["006000300","049070000","100006400","000090500","060103080","003060000","008700005","000080960","004000800"],
-["000000907","000420180","000705026","100904060","050000010","060503002","820108000","034059000","507000000"],
-["040100050","070009000","005028000","600050800","200301407","003040005","000640070","000800010","910007040"],
-["800270000","007000400","000056030","600000380","000103000","053000007","080940000","002000100","000031006"],
-["100900030","000040006","053001000","009080500","600050003","007030100","000700960","800010000","090004005"],
-["030800000","900040070","007029040","000900800","040050020","005001000","080390700","020060001","000005030"],
-["000600400","700003006","081000000","003080700","600090005","004050900","000000190","200900003","009001000"],
-["003050000","009000040","046003010","000800000","057060390","000007000","080300270","060000500","000070600"],
-["004000700","170200004","000009030","040050700","800030005","007010040","090600000","500004021","002000900"],
-["000000201","030500060","007030000","000009800","304060900","005300000","000060300","080004020","702000000"],
-["000000000","349200000","000030074","006000002","150000090","700000500","260090000","000001836","000000000"],
-["050006020","009800000","800070036","400000005","000060000","200000008","730050002","000004900","060200040"],
-["640000000","000109000","000006450","020050000","100000009","000040020","018700000","000401000","000000036"],
-["007000003","406050801","008030000","090000100","000306000","005000070","000040200","203090604","600000500"],
-["003900800","000070000","140008000","000060900","306000107","007020000","000400065","000050000","004003900"],
-["080000050","000390000","000054080","007600000","090070030","000001700","040230000","000016000","050000020"],
-["000160008","400050002","000000370","038004060","000000000","060300840","025000000","900040005","800071000"],
-["000050030","400008000","080300005","005090200","030000040","004060700","700002090","000700006","050040000"],
-["000007080","080000600","670005000","001080000","040030050","000060400","000800053","007000020","090100000"],
-["060700000","000030060","009000800","200090000","008000300","000050004","007000900","030070000","000004010"],
-["002340000","100000040","000007060","050900000","000060000","000003080","070600000","030000009","000015400"],
-["000902000","050030070","004000000","000080300","208000704","001060000","000000600","060070090","000803000"]
-],
-hard:[
-["800000000","003600000","070090200","060005030","500800700","000010040","000040500","000000800","097000600"],
-["000006000","059000008","200008001","600030020","003000600","020080007","900400002","800000970","000200000"],
-["000000085","000210009","100300000","500000030","040008000","000700600","010600003","700000200","002000000"],
-["053030000","000600000","600051004","030000200","000070000","000040090","001507000","700000040","000200031"],
-["000700600","700090000","060005000","090000027","800030009","650000040","000800030","000060002","001003000"],
-["000030006","008006200","120000000","000104300","700000500","009805000","000000046","004300900","900060000"],
-["000049300","000000007","070600000","405000030","002000001","060000804","000003010","900000000","003870000"],
-["020000000","000600003","300050010","000306001","040070080","900801000","070090004","600002000","000000090"],
-["000060070","010000008","007004000","500000031","000809000","180000007","000200800","600000050","050090000"],
-["000000000","000003085","007600000","000500070","040100000","050070600","000000030","500400000","000800704"],
-["090000040","000600100","000053000","802000000","050000060","000000701","000730000","003001000","070000080"],
-["000000530","000060800","080500060","600000000","000040000","000000004","020005070","003080000","015000000"]
-]
+// ══════════════════════════════════════════════════
+// SHIFT DEFINITIONS
+// ══════════════════════════════════════════════════
+let SHIFTS = {
+  // Standard night shifts (22:00 onwards)
+  '2330-0830': {ns:23*60+30, ne:7*60,  max:7.5},
+  '2300-0800': {ns:23*60,    ne:7*60,  max:8.0},
+  '2200-0700': {ns:22*60,    ne:7*60,  max:9.0},
+  '2100-0600': {ns:22*60,    ne:6*60,  max:8.0},
+  '1700-0200': {ns:22*60,    ne:2*60,  max:4.0},
+  '1600-0100': {ns:22*60,    ne:1*60,  max:3.0},
+  '1500-0000': {ns:22*60,    ne:0,     max:2.0},
+  '1400-2300': {ns:22*60,    ne:23*60, max:1.0},
+  // Early-morning shifts (cross-midnight front segment)
+  '0500-1400': {ns:5*60,     ne:7*60,  max:2.0},
+  '0630-1530': {ns:6*60+30,  ne:7*60,  max:0.5},
+  '0000-0900': {ns:0,        ne:7*60,  max:7.0},
+  '0100-1000': {ns:1*60,     ne:7*60,  max:6.0},
+  '0200-1100': {ns:2*60,     ne:7*60,  max:5.0},
+  '0300-1200': {ns:3*60,     ne:7*60,  max:4.0},
+  '0400-1300': {ns:4*60,     ne:7*60,  max:3.0},
 };
 
-let board, solution, given, notes, noteMode, selected, hintsLeft, timerInterval, seconds, diff, errorCells;
+// ══════════════════════════════════════════════════
+// FIELD MAPPING — supports YOUR exact column names
+// + all common aliases
+// ══════════════════════════════════════════════════
+const FIELD_MAP = {
+  empId: ['員工編號','emp_id','empId','編號','工號'],
+  name:  ['員工姓名','姓名','name','Name','員工名稱'],
+  dept:  ['部門','課別','科別','dept','department'],
+  shift: ['班別名稱','班別','班次','shift'],
+  status:['檢核狀態','狀態','status'],
+  date:  ['出勤日','日期','date','Date'],
+  cin:   ['實際出勤','出勤時間','上班時間','clock_in','clockIn'],
+  cout:  ['實際退勤','退勤時間','下班時間','clock_out','clockOut'],
+  late:  ['遲到','late'],
+  early: ['早退','early_leave'],
+  absent:['曠職','absent'],
+  note:  ['備註','note','remark','說明'],
+};
 
-function parsePuzzle(rows){ return rows.join('').split('').map(Number); }
+// ══════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════
+let rawRows   = [];
+let processed = [];
+let aggregated= [];
+let detectedCols = {};
+let detectedTimeFmt = '';
+let sortKey='nightHours', sortDir=-1;
 
-function solveSudoku(b){
-  const arr=[...b];
-  function ok(pos,n){
-    const r=Math.floor(pos/9),c=pos%9;
-    for(let i=0;i<9;i++) if(arr[r*9+i]===n||arr[i*9+c]===n) return false;
-    const br=Math.floor(r/3)*3,bc=Math.floor(c/3)*3;
-    for(let i=0;i<3;i++) for(let j=0;j<3;j++) if(arr[(br+i)*9+bc+j]===n) return false;
-    return true;
-  }
-  function go(){
-    const p=arr.findIndex(v=>v===0); if(p===-1) return true;
-    for(let n=1;n<=9;n++) if(ok(p,n)){arr[p]=n; if(go()) return true; arr[p]=0;}
-    return false;
-  }
-  go(); return arr;
+// ══════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════
+const PAGE_TITLES = {upload:'上傳 Excel / CSV',eip:'EIP 系統串接',dash:'數據儀表板',result:'加總報表',detail:'明細查詢',config:'班別 & 欄位設定'};
+function gotoPage(id, btn) {
+  document.querySelectorAll('.nav').forEach(n=>n.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.getElementById('page-ttl').textContent = PAGE_TITLES[id];
 }
 
-function newGame(){
-  const pool=PUZZLES[diff];
-  const raw=parsePuzzle(pool[Math.floor(Math.random()*pool.length)]);
-  board=[...raw]; solution=solveSudoku(raw);
-  given=raw.map(v=>v!==0);
-  notes=Array(81).fill(null).map(()=>new Set());
-  errorCells=new Set(); hintsLeft=3; selected=-1; noteMode=false;
-  document.getElementById('notes-btn').textContent='📝 筆記';
-  document.getElementById('notes-btn').classList.remove('active');
-  document.getElementById('hint-badge').textContent=`💡 ${hintsLeft}`;
-  showMsg('','');
-  clearInterval(timerInterval); seconds=0; updateTimer();
-  timerInterval=setInterval(()=>{seconds++;updateTimer();},1000);
-  renderBoard(); updateProgress();
+// ══════════════════════════════════════════════════
+// LOG
+// ══════════════════════════════════════════════════
+function log(msg, type='dim') {
+  const box = document.getElementById('log');
+  const t = new Date().toLocaleTimeString('zh-TW',{hour12:false});
+  const d = document.createElement('div');
+  d.className = 'll '+type;
+  d.textContent = t+'  '+msg;
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
 }
 
-function changeDiff(){
-  diff=document.getElementById('diff-sel').value;
-  const labels={easy:'初級',medium:'中級',hard:'高級'};
-  const badge=document.getElementById('lvl-badge');
-  badge.textContent=labels[diff];
-  badge.className='pill '+({easy:'diff-easy',medium:'diff-medium',hard:'diff-hard'}[diff]);
-  newGame();
-}
+// ══════════════════════════════════════════════════
+// DRAG & DROP
+// ══════════════════════════════════════════════════
+const dz = document.getElementById('dz');
+dz.addEventListener('dragover', e=>{e.preventDefault();dz.classList.add('over')});
+dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+dz.addEventListener('drop', e=>{e.preventDefault();dz.classList.remove('over');const f=e.dataTransfer.files[0];if(f)processFile(f)});
+function handleFile(e){const f=e.target.files[0];if(f)processFile(f);e.target.value='';}
 
-function updateTimer(){
-  const m=String(Math.floor(seconds/60)).padStart(2,'0'),s=String(seconds%60).padStart(2,'0');
-  document.getElementById('timer-badge').textContent=`${m}:${s}`;
-}
+// ══════════════════════════════════════════════════
+// FILE PROCESSING
+// ══════════════════════════════════════════════════
+function processFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  log(`讀取：${file.name}（${(file.size/1024).toFixed(1)} KB）`,'info');
+  showProgress(file.name, 20);
 
-function updateProgress(){
-  const filled=board.filter((v,i)=>v!==0).length;
-  document.getElementById('progress-bar').style.width=(filled/81*100)+'%';
-}
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      let allRows = [];
+      if (ext==='csv') {
+        allRows = parseCSV(e.target.result);
+        log(`CSV：${allRows.length} 筆`,'ok');
+      } else {
+        // xlsx — read ALL sheets, merge
+        const wb = XLSX.read(e.target.result, {type:'binary', cellDates:true});
+        log(`Excel 共 ${wb.SheetNames.length} 個 Sheet：${wb.SheetNames.join('、')}`,'info');
+        wb.SheetNames.forEach(sn=>{
+          // Use raw:false so dates come as formatted strings OR use cellDates:true
+          const ws = wb.Sheets[sn];
+          const sheetRows = XLSX.utils.sheet_to_json(ws, {defval:''});
+          log(`  Sheet "${sn}"：${sheetRows.length} 筆`,'ok');
+          allRows = allRows.concat(sheetRows);
+        });
+        log(`全部 Sheet 合計 ${allRows.length} 筆`,'ok');
+      }
+      showProgress(file.name, 60);
 
-function renderBoard(){
-  const el=document.getElementById('board'); el.innerHTML='';
-  for(let i=0;i<81;i++){
-    const cell=document.createElement('div');
-    cell.className='cell';
-    const r=Math.floor(i/9),c=i%9;
-    if(c===2||c===5) cell.classList.add('border-right');
-    if(r===2||r===5) cell.classList.add('border-bottom');
-    if(given[i]) cell.classList.add('given');
-    else if(errorCells.has(i)) cell.classList.add('error');
-    else if(board[i]!==0) cell.classList.add('user-input');
-    if(i===selected){
-      cell.classList.add('selected');
-    } else if(selected>=0){
-      const sr=Math.floor(selected/9),sc=selected%9;
-      const inBox=(Math.floor(sr/3)===Math.floor(r/3)&&Math.floor(sc/3)===Math.floor(c/3));
-      if(sr===r||sc===c||inBox) cell.classList.add('highlight');
-      if(board[selected]!==0&&board[i]===board[selected]&&!errorCells.has(i)) cell.classList.add('same-val');
+      // Detect columns from first row's keys
+      if (allRows.length) detectColumns(Object.keys(allRows[0]));
+
+      rawRows = normalizeRows(allRows);
+      log(`有效紀錄 ${rawRows.length} 筆，開始計算...`,'info');
+      showProgress(file.name, 90);
+      calculate();
+      showProgress(file.name, 100, true);
+      document.getElementById('fmap-card').style.display = 'block';
+      showFieldMapStatus();
+    } catch(err) {
+      log(`錯誤：${err.message}`,'err');
+      console.error(err);
+      document.getElementById('upload-badge').className='badge badge-red';
+      document.getElementById('upload-badge').textContent='失敗';
     }
-    if(board[i]!==0){
-      cell.textContent=board[i];
-    } else if(notes[i].size>0){
-      const ng=document.createElement('div'); ng.className='note-grid';
-      for(let n=1;n<=9;n++){const s=document.createElement('span');s.textContent=notes[i].has(n)?n:'';ng.appendChild(s);}
-      cell.appendChild(ng);
-    }
-    cell.addEventListener('pointerdown',()=>selectCell(i));
-    el.appendChild(cell);
-  }
+  };
+  if (ext==='csv') reader.readAsText(file,'UTF-8');
+  else reader.readAsBinaryString(file);
 }
 
-function selectCell(i){ selected=i; renderBoard(); }
+function showProgress(fname, pct, done=false) {
+  document.getElementById('upload-status').style.display='block';
+  document.getElementById('upload-fname').textContent=fname;
+  document.getElementById('prog-bar').style.width=pct+'%';
+  const b=document.getElementById('upload-badge');
+  if(done){b.className='badge badge-green';b.textContent='完成';}
+  else{b.className='badge badge-blue';b.textContent='處理中';}
+}
 
-function inputNum(n){
-  if(selected<0) return;
-  if(given[selected]) return;
-  if(n===0){ board[selected]=0; notes[selected].clear(); errorCells.delete(selected); }
-  else if(noteMode){
-    if(board[selected]!==0) return;
-    notes[selected].has(n)?notes[selected].delete(n):notes[selected].add(n);
+// ══════════════════════════════════════════════════
+// COLUMN DETECTION
+// ══════════════════════════════════════════════════
+function detectColumns(keys) {
+  detectedCols = {};
+  for (const [field, aliases] of Object.entries(FIELD_MAP)) {
+    const found = aliases.find(a => keys.includes(a));
+    detectedCols[field] = found || null;
+  }
+  log(`欄位偵測：${Object.entries(detectedCols).map(([k,v])=>k+'→'+(v||'?')).join('  ')}`,'info');
+}
+
+function showFieldMapStatus() {
+  const labels = {name:'姓名欄',dept:'課別/部門欄',shift:'班別欄',cin:'實際出勤欄',cout:'實際退勤欄',note:'備註欄'};
+  for (const [k, lbl] of Object.entries(labels)) {
+    const el = document.getElementById('fm-'+k.replace('cin','cin').replace('cout','cout'));
+    if (!el) continue;
+    const col = detectedCols[k];
+    el.textContent = col ? `「${col}」✓` : '未找到 ✗';
+    el.className = 'fmap-val ' + (col?'ok':'warn');
+  }
+  // Use the right ids
+  const ids={name:'fm-name',dept:'fm-dept',shift:'fm-shift',cin:'fm-cin',cout:'fm-cout',note:'fm-note'};
+  for (const [k, id] of Object.entries(ids)) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    const col = detectedCols[k];
+    el.textContent = col ? `「${col}」 ✓` : '未偵測到';
+    el.className = 'fmap-val '+(col?'ok':'warn');
+  }
+  document.getElementById('time-fmt-info').textContent = detectedTimeFmt || '自動偵測（支援 datetime.time / HH:MM 字串 / Excel 序列值）';
+}
+
+// ══════════════════════════════════════════════════
+// CSV PARSER
+// ══════════════════════════════════════════════════
+function parseCSV(text) {
+  const lines = text.replace(/\r\n/g,'\n').split('\n').filter(l=>l.trim());
+  if (lines.length<2) return [];
+  const headers = lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+  return lines.slice(1).map(line=>{
+    const vals=line.split(',').map(v=>v.trim().replace(/^"|"$/g,''));
+    const obj={};
+    headers.forEach((h,i)=>obj[h]=vals[i]||'');
+    return obj;
+  });
+}
+
+// ══════════════════════════════════════════════════
+// TIME PARSING — handles ALL formats from your xlsx
+// ══════════════════════════════════════════════════
+function toMin(v) {
+  if (v===null||v===undefined||v==='') return null;
+
+  // 1. JS Date object (XLSX cellDates:true) or Date-like
+  if (v instanceof Date) {
+    return v.getHours()*60 + v.getMinutes();
+  }
+
+  // 2. Number: Excel serial fraction (0..1) or could be HH.MM
+  if (typeof v==='number') {
+    if (v >= 0 && v < 1) {
+      // Fractional day: 0.5 = noon
+      const totalMins = Math.round(v * 1440);
+      return totalMins % 1440;
+    }
+    // Could be HHMM integer like 2330
+    if (v >= 0 && v <= 2359) {
+      const h = Math.floor(v/100), m = v%100;
+      if (h<=23 && m<=59) return h*60+m;
+    }
+    return null;
+  }
+
+  // 3. String formats: "HH:MM", "HH:MM:SS", "HHMM"
+  const s = String(v).trim();
+  if (!s || s==='None' || s==='null') return null;
+
+  const colonMatch = s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (colonMatch) return parseInt(colonMatch[1])*60+parseInt(colonMatch[2]);
+
+  if (/^\d{4}$/.test(s)) return parseInt(s.slice(0,2))*60+parseInt(s.slice(2,4));
+
+  // 4. Object with hour/minute (openpyxl datetime.time-like, serialized)
+  if (typeof v==='object' && v!==null && 'hour' in v) return v.hour*60+v.minute;
+
+  return null;
+}
+
+function fmtMin(m) {
+  if (m===null||m===undefined) return '—';
+  m = ((m%1440)+1440)%1440;
+  return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+}
+
+// ══════════════════════════════════════════════════
+// NORMALIZE ROWS
+// ══════════════════════════════════════════════════
+function getField(row, field) {
+  const col = detectedCols[field];
+  if (col && row[col]!==undefined) return row[col];
+  // fallback: try all aliases
+  for (const a of FIELD_MAP[field]) {
+    if (row[a]!==undefined && row[a]!=='') return row[a];
+  }
+  return '';
+}
+
+function normalizeRows(rows) {
+  // Auto-detect time format from first non-empty time cell
+  const sample = rows.find(r => getField(r,'cin'));
+  if (sample) {
+    const v = getField(sample,'cin');
+    if (v instanceof Date) detectedTimeFmt = 'JS Date 物件（Excel cellDates）';
+    else if (typeof v==='number') detectedTimeFmt = `數值型（${v}）— 可能為 Excel 序列值`;
+    else detectedTimeFmt = `字串型：「${v}」`;
+  }
+
+  return rows
+    .map(r=>{
+      // Sanitize note: treat \xa0 (non-breaking space) as empty
+      const rawNote = getField(r,'note');
+      const note = (rawNote && String(rawNote).replace(/\xa0/g,'').trim()) || '';
+      return {
+        empId:  String(getField(r,'empId')||'').trim(),
+        name:   String(getField(r,'name')||'').trim(),
+        dept:   String(getField(r,'dept')||'').trim() || '未分類',
+        shift:  String(getField(r,'shift')||'').trim(),
+        status: String(getField(r,'status')||'').trim(),
+        date:   String(getField(r,'date')||'').trim(),
+        cin:    getField(r,'cin'),
+        cout:   getField(r,'cout'),
+        note,
+      };
+    })
+    .filter(r=>r.name);
+}
+
+// ══════════════════════════════════════════════════
+// LEAVE DEDUCTION
+// Handles: 特休/事假/病假/生理假/住院傷病假/未住院病假
+// Format:  假別HHMM~HHMM  (no space required)
+// ══════════════════════════════════════════════════
+function parseLeave(note) {
+  if (!note) return [];
+  const leaves=[];
+  // Match any prefix before 4-digit time ~ 4-digit time
+  for (const m of note.matchAll(/(\d{4})\s*[~～]\s*(\d{4})/g)) {
+    const s=parseInt(m[1].slice(0,2))*60+parseInt(m[1].slice(2,4));
+    const e=parseInt(m[2].slice(0,2))*60+parseInt(m[2].slice(2,4));
+    leaves.push([s,e]);
+  }
+  return leaves;
+}
+
+function overlapMins(s1,e1,s2,e2) {
+  const a2=e1<=s1?e1+1440:e1;
+  const b2=e2<=s2?e2+1440:e2;
+  return Math.max(0,Math.min(a2,b2)-Math.max(s1,s2));
+}
+
+// ══════════════════════════════════════════════════
+// SHIFT LOOKUP & DERIVE
+// Supports:
+//   - Prefixed names: "上班2330-0830", "休假1500-0000"
+//   - Plain codes:    "2330-0830"
+//   - Static lookup table (SHIFTS) for manual overrides
+// "休假" prefix = no night pay regardless of hours
+// ══════════════════════════════════════════════════
+function parseShiftCode(raw) {
+  // Returns { code, prefix, isHoliday }
+  if (!raw) return null;
+  const s = String(raw).trim();
+  // Extract HHMM-HHMM from end of string (handles any Chinese prefix)
+  const m = s.match(/(\d{4})-(\d{4})$/);
+  if (!m) return null;
+  const prefix = s.slice(0, s.indexOf(m[0])).trim();   // e.g. "上班" / "休假" / ""
+  const isHoliday = prefix === '休假';
+  return { code: m[0], prefix, isHoliday, raw: s };
+}
+
+function getShift(rawShift) {
+  const parsed = parseShiftCode(rawShift);
+  if (!parsed) return null;
+
+  // 休假 班別 → 0 夜點, 0 跨夜
+  if (parsed.isHoliday) return { ns:0, ne:7*60, max:0, isHoliday:true };
+
+  const code = parsed.code;
+
+  // 1. Check static lookup table (manual overrides)
+  if (SHIFTS[code]) return { ...SHIFTS[code], isHoliday:false };
+
+  // 2. Auto-derive from HHMM-HHMM
+  // ─────────────────────────────────────────────────────────────────
+  // CORRECT algorithm: compute intersection of shift window with the
+  // night zone [22:00~07:00], which spans TWO segments in a 0–1440 day:
+  //   Segment A: [22:00, 24:00]  i.e. [1320, 1440]
+  //   Segment B: [00:00, 07:00]  i.e. [0,    420]
+  //
+  // This correctly handles:
+  //   • 0500-1400 → only B overlap: 05:00~07:00 = 2.0 hr
+  //   • 0630-1530 → only B overlap: 06:30~07:00 = 0.5 hr
+  //   • 2330-0830 → A: 22:00~24:00 + B: 00:00~07:00 = 7.5 hr
+  //   • 1700-0200 → A: 22:00~24:00 + B: 00:00~02:00 = 4.0 hr
+  // ─────────────────────────────────────────────────────────────────
+  const sh = parseInt(code.slice(0,2)), sm = parseInt(code.slice(2,4));
+  const eh = parseInt(code.slice(5,7)), em = parseInt(code.slice(7,9));
+  const startMin = sh*60 + sm;
+  const endMin   = eh*60 + em;
+  const NS = 22*60, NE7 = 7*60;   // 1320, 420
+
+  function segOverlap(s1, e1, s2, e2) { return Math.max(0, Math.min(e1,e2) - Math.max(s1,s2)); }
+
+  let minA, minB;   // minutes of overlap with each segment
+  if (endMin > startMin) {
+    // Non-overnight shift (e.g. 05:00–14:00, 08:00–17:00, 22:00–23:00)
+    minA = segOverlap(startMin, endMin, NS, 1440);    // 22:00–24:00
+    minB = segOverlap(startMin, endMin, 0,  NE7);     // 00:00–07:00
   } else {
-    board[selected]=n; notes[selected].clear(); errorCells.delete(selected);
-    if(n!==solution[selected]) errorCells.add(selected);
-    else showMsg('✅ 正確！繼續加油！','success');
+    // Overnight shift (e.g. 23:30–08:30, 17:00–02:00)
+    minA = segOverlap(startMin, 1440, NS, 1440);      // start–24:00 ∩ 22:00–24:00
+    minB = segOverlap(0, endMin, 0, NE7);             // 00:00–end   ∩ 00:00–07:00
   }
-  renderBoard(); updateProgress(); checkWin();
+
+  const maxH = (minA + minB) / 60;
+
+  // For display: night interval starts at max(shift_start, 22:00) if seg A,
+  // or shift_start if only seg B
+  const ns = (minA > 0) ? NS : startMin;
+  const ne = (minB > 0) ? NE7 : (endMin > startMin ? endMin : endMin);
+
+  return { ns, ne, max: maxH, isHoliday: false };
 }
 
-function checkWin(){
-  if(board.every((v,i)=>v===solution[i])){
-    clearInterval(timerInterval);
-    const m=Math.floor(seconds/60),s=seconds%60;
-    const stars=seconds<120?'⭐⭐⭐':seconds<300?'⭐⭐':'⭐';
-    document.getElementById('win-stars').textContent=stars;
-    document.getElementById('win-msg').textContent=`用時 ${m} 分 ${s} 秒完成！你真的很厲害！`;
-    document.getElementById('win-overlay').classList.add('show');
+// Whether this shift code is excluded from overnight counting (14xx, 15xx start)
+function isExcludeOvernight(rawShift) {
+  const parsed = parseShiftCode(rawShift);
+  if (!parsed) return true;
+  if (parsed.isHoliday) return true;
+  const prefix2 = parsed.code.slice(0,2);   // first 2 digits of HHMM
+  return prefix2 === '14' || prefix2 === '15';
+}
+
+// ══════════════════════════════════════════════════
+// CALCULATE PER ROW
+// ══════════════════════════════════════════════════
+function calcRow(r) {
+  const sd = getShift(r.shift);
+
+  // No night hours for day shifts or unknown shifts
+  if (!sd || sd.max === 0) {
+    return {...r, nightH:0, overnight:0, deductH:0,
+            interval:'—', maxH:0, isNight:false, warn: sd ? '' : '未知班別'};
   }
-}
 
-function checkBoard(){
-  errorCells=new Set(); let hasErr=false;
-  for(let i=0;i<81;i++) if(!given[i]&&board[i]!==0&&board[i]!==solution[i]){errorCells.add(i);hasErr=true;}
-  if(hasErr) showMsg('❌ 有幾格填錯了，已標示紅色','error');
-  else showMsg('✅ 目前填入的全都正確！','success');
-  renderBoard();
-}
+  const {ns, ne, max} = sd;
 
-function useHint(){
-  if(hintsLeft<=0){showMsg('提示次數已用完！','error');return;}
-  const empty=[];
-  for(let i=0;i<81;i++) if(!given[i]&&board[i]===0) empty.push(i);
-  if(!empty.length) return;
-  const idx=empty[Math.floor(Math.random()*empty.length)];
-  board[idx]=solution[idx]; notes[idx].clear(); errorCells.delete(idx);
-  hintsLeft--; document.getElementById('hint-badge').textContent=`💡 ${hintsLeft}`;
-  selected=idx; showMsg('💡 已幫你填入一格！','success');
-  renderBoard(); updateProgress(); checkWin();
-}
+  // Leave deduction — all leave types (特休/事假/病假/公假/喪假/...)
+  const leaves    = parseLeave(r.note);
+  const deductMin = leaves.reduce((s,[ls,le])=>s+overlapMins(ls,le,ns,ne),0);
+  const nightH    = parseFloat(Math.max(0, max - deductMin/60).toFixed(1));
 
-function toggleNotes(){
-  noteMode=!noteMode;
-  const btn=document.getElementById('notes-btn');
-  btn.textContent=noteMode?'📝 筆記 ON':'📝 筆記';
-  noteMode?btn.classList.add('active'):btn.classList.remove('active');
-}
-
-let msgTimeout;
-function showMsg(text,type){
-  const el=document.getElementById('msg');
-  el.textContent=text; el.className='';
-  if(type) el.classList.add(type);
-  clearTimeout(msgTimeout);
-  if(text) msgTimeout=setTimeout(()=>{el.textContent='';el.className='';},3000);
-}
-
-function buildNumpad(){
-  const pad=document.getElementById('numpad'); pad.innerHTML='';
-  for(let n=1;n<=9;n++){
-    const btn=document.createElement('div'); btn.className='num-btn';
-    btn.textContent=n; btn.addEventListener('pointerdown',()=>inputNum(n));
-    pad.appendChild(btn);
-  }
-  const e=document.createElement('div'); e.className='num-btn erase';
-  e.textContent='✕ 清除'; e.addEventListener('pointerdown',()=>inputNum(0));
-  pad.appendChild(e);
-}
-
-document.addEventListener('keydown',e=>{
-  const n=parseInt(e.key);
-  if(n>=1&&n<=9) inputNum(n);
-  if(e.key==='Backspace'||e.key==='Delete'||e.key==='0') inputNum(0);
-  if(selected<0) return;
-  const moves={ArrowRight:1,ArrowLeft:-1,ArrowDown:9,ArrowUp:-9};
-  if(moves[e.key]!==undefined){
-    e.preventDefault();
-    const ns=selected+moves[e.key];
-    if(ns>=0&&ns<81){
-      if(e.key==='ArrowRight'&&selected%9===8) return;
-      if(e.key==='ArrowLeft'&&selected%9===0) return;
-      selected=ns; renderBoard();
+  // Overnight count
+  let overnight = 0;
+  if (!isExcludeOvernight(r.shift)) {
+    const ci = toMin(r.cin), co = toMin(r.cout);
+    if (ci !== null && co !== null) {
+      // clock_out is next day if it's < clock_in and in early morning
+      const isNext = co < ci && co <= 12*60;
+      if (isNext && co > 30) overnight = 1;
     }
   }
-});
 
-diff='easy';
-buildNumpad();
-newGame();
+  const NS=22*60, NE7=7*60;
+
+  // Build display interval string
+  // For shifts with only segment B (early morning, e.g. 05:00-14:00): show "05:00–07:00"
+  // For shifts with only segment A (e.g. 14:00-23:00): show "22:00–23:00"
+  // For shifts with both A+B (e.g. 23:30-08:30): show "23:30–07:00"
+  let interval;
+  if (sd.max === 0) {
+    interval = '—';
+  } else {
+    const dispNS = fmtMin(ns);
+    const dispNE = fmtMin(ne === 0 ? 0 : ne);   // 0 = midnight display as 00:00
+    interval = `${dispNS}–${dispNE}`;
+  }
+
+  return {...r, nightH, overnight,
+          deductH: parseFloat((deductMin/60).toFixed(1)),
+          interval, maxH: max, isNight: true, warn: ''};
+}
+
+// ══════════════════════════════════════════════════
+// AGGREGATE & RENDER
+// ══════════════════════════════════════════════════
+function calculate() {
+  if (!rawRows.length) return;
+  try {
+    processed = rawRows.map(r => { try { return calcRow(r); } catch(e) { return {...r, nightH:0, overnight:0, deductH:0, interval:'—', maxH:0, isNight:false, warn:'計算錯誤'}; } });
+
+  // GroupBy name — traverse ALL rows first regardless of night/day
+  const map = {};
+  processed.forEach(p => {
+    if (!map[p.name]) map[p.name] = {
+      name:p.name, dept:p.dept, empId:p.empId,
+      nightHours:0, overnight:0, count:0, nightCount:0, deductH:0
+    };
+    const g = map[p.name];
+    g.nightHours  += p.nightH;
+    g.overnight   += p.overnight;
+    g.count       += 1;
+    if (p.isNight) g.nightCount += 1;
+    g.deductH     += p.deductH;
+  });
+
+  aggregated = Object.values(map)
+    .filter(g => g.nightHours > 0)   // only employees with night hours
+    .map(g => ({
+      ...g,
+      nightHours: parseFloat(g.nightHours.toFixed(1)),
+      deductH:    parseFloat(g.deductH.toFixed(1)),
+    }));
+  aggregated.sort((a,b) => b.nightHours - a.nightHours);
+
+  const total = aggregated.reduce((s,r)=>s+r.nightHours, 0);
+  const allEmp = Object.keys(map).length;
+  log(`✓ 計算完成：全部 ${allEmp} 人 / ${processed.length} 筆 → 夜班員工 ${aggregated.length} 人 / 總夜點 ${total.toFixed(1)} hr`, 'ok');
+
+  updateSidebar();
+  renderStats();
+  populateFilters();
+  renderResult();
+  renderDetail();
+  renderDashboard();
+  document.getElementById('btn-export').disabled = false;
+
+  // Auto-jump to dashboard
+  document.querySelectorAll('.nav')[2].click();
+  } catch(e) {
+    console.error('calculate error:', e);
+    log(`計算過程發生錯誤：${e.message}，請確認上傳資料格式是否正確`, 'err');
+    // Still try to render whatever partial data we have
+    try { renderResult(); } catch(_) {}
+    try { renderDetail(); } catch(_) {}
+  }
+}
+
+function updateSidebar() {
+  const t=aggregated.reduce((s,r)=>s+r.nightHours,0);
+  document.getElementById('sb-emp').textContent=aggregated.length;
+  document.getElementById('sb-rows').textContent=processed.length;
+  document.getElementById('sb-total').textContent=t.toFixed(1)+' hr';
+}
+
+function renderStats() {
+  const t=aggregated.reduce((s,r)=>s+r.nightHours,0);
+  const on=aggregated.reduce((s,r)=>s+r.overnight,0);
+  const avg=aggregated.length?(t/aggregated.length).toFixed(1):0;
+  const top=aggregated[0]||{};
+  document.getElementById('stats-row').innerHTML=`
+    <div class="stat"><div class="stat-lbl">員工人數</div><div class="stat-val">${aggregated.length}<span class="stat-unit">人</span></div></div>
+    <div class="stat"><div class="stat-lbl">總夜點時數</div><div class="stat-val">${t.toFixed(1)}<span class="stat-unit">hr</span></div></div>
+    <div class="stat"><div class="stat-lbl">平均夜點/人</div><div class="stat-val">${avg}<span class="stat-unit">hr</span></div></div>
+    <div class="stat"><div class="stat-lbl">總跨夜天數</div><div class="stat-val">${on}<span class="stat-unit">天</span></div></div>`;
+}
+
+function populateFilters() {
+  const depts=[...new Set(aggregated.map(r=>r.dept))].sort();
+  const shifts=[...new Set(processed.map(r=>r.shift).filter(Boolean))].sort();
+  ['r-dept','d-dept'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.innerHTML='<option value="">全部課別</option>'+depts.map(d=>`<option>${d}</option>`).join('');
+  });
+  const ds=document.getElementById('d-shift');
+  if(ds) ds.innerHTML='<option value="">全部班別</option>'+shifts.map(s=>`<option>${s}</option>`).join('');
+}
+
+// ── Sort ──
+function sort(key) {
+  sortDir=(sortKey===key)?-sortDir:-1;
+  sortKey=key;
+  aggregated.sort((a,b)=>{
+    const av=typeof a[key]==='string'?a[key].localeCompare(b[key]):(a[key]||0)-(b[key]||0);
+    return av*sortDir;
+  });
+  renderResult();
+}
+
+// ── Result Table ──
+function renderResult() {
+  try {
+    if (!aggregated.length) {
+      document.getElementById('result-empty').style.display = 'block';
+      document.getElementById('result-data').style.display  = 'none';
+      return;
+    }
+    const q    = (document.getElementById('r-q')?.value||'').toLowerCase();
+    const dept = document.getElementById('r-dept')?.value||'';
+    const data = aggregated.filter(r=>(!q||r.name.includes(q)||String(r.empId).includes(q))&&(!dept||r.dept===dept));
+    document.getElementById('result-empty').style.display = data.length?'none':'block';
+    document.getElementById('result-data').style.display  = data.length?'block':'none';
+    document.getElementById('result-count').textContent = `共 ${data.length} 人`;
+    document.getElementById('result-tbody').innerHTML = data.map((r,i)=>`
+      <tr>
+        <td class="mono" style="color:var(--ink3)">${String(i+1).padStart(2,'0')}</td>
+        <td class="mono" style="color:var(--ink3);font-size:11px">${r.empId||'—'}</td>
+        <td>${r.dept}</td>
+        <td class="name-cell">${r.name}</td>
+        <td class="tr accent mono">${r.nightHours.toFixed(1)}</td>
+        <td class="tr mono">${r.overnight}</td>
+        <td class="tr mono" style="color:var(--ink3)">${r.nightCount}</td>
+        <td class="tr">${r.deductH>0?`<span class="pill pill-neg">-${r.deductH.toFixed(1)}</span>`:'<span class="pill pill-dim">—</span>'}</td>
+      </tr>`).join('');
+  } catch(e) {
+    console.error('renderResult error:', e);
+    const tb = document.getElementById('result-tbody');
+    if (tb) tb.innerHTML = `<tr><td colspan="8" style="color:var(--red);text-align:center;padding:20px;font-size:12px;">顯示錯誤：${e.message}</td></tr>`;
+  }
+}
+
+// ── Detail Table ──
+function renderDetail() {
+  try {
+    if (!processed.length) {
+      document.getElementById('detail-empty').style.display = 'block';
+      document.getElementById('detail-data').style.display  = 'none';
+      return;
+    }
+    const q         = (document.getElementById('d-q')?.value||'').toLowerCase();
+    const dept      = document.getElementById('d-dept')?.value||'';
+    const shift     = document.getElementById('d-shift')?.value||'';
+    const nightOnly = document.getElementById('d-nightonly')?.checked ?? true;
+
+  const data = processed.filter(r =>
+    (!q     || r.name.includes(q) || String(r.empId).includes(q)) &&
+    (!dept  || r.dept===dept) &&
+    (!shift || r.shift===shift) &&
+    (!nightOnly || r.isNight)
+  );
+
+  document.getElementById('detail-empty').style.display = data.length?'none':'block';
+  document.getElementById('detail-data').style.display  = data.length?'block':'none';
+  document.getElementById('detail-count').textContent   = `共 ${data.length} 筆`;
+
+  const statusColor = s => {
+    if (!s || s==='正常') return 'color:var(--green)';
+    if (s.includes('異常')) return 'color:var(--red)';
+    return 'color:var(--ink3)';
+  };
+
+  document.getElementById('detail-tbody').innerHTML = data.map(p=>`
+    <tr>
+      <td>${p.dept}</td>
+      <td class="mono" style="font-size:10px;color:var(--ink3)">${p.empId||'—'}</td>
+      <td class="name-cell">${p.name}</td>
+      <td><span class="pill">${p.shift||'—'}</span></td>
+      <td class="mono" style="font-size:11px;color:var(--ink3)">${p.date||'—'}</td>
+      <td class="mono" style="font-size:11px">${fmtMin(toMin(p.cin))}</td>
+      <td class="mono" style="font-size:11px">${fmtMin(toMin(p.cout))}</td>
+      <td class="mono" style="font-size:10px;color:var(--ink3)">${p.interval}</td>
+      <td class="tr accent mono">${p.nightH.toFixed(1)}</td>
+      <td class="tr">${p.deductH>0?`<span class="pill pill-neg">-${p.deductH.toFixed(1)}</span>`:'<span class="pill pill-dim">—</span>'}</td>
+      <td class="tr mono">${p.overnight}</td>
+      <td style="font-size:11px;color:var(--ink3);max-width:150px;overflow:hidden;text-overflow:ellipsis">${p.note||''}</td>
+      <td style="font-size:10px;font-family:var(--mono);${statusColor(p.status)}">${p.status||''}</td>
+    </tr>`).join('');
+  } catch(e) {
+    console.error('renderDetail error:', e);
+    const tb = document.getElementById('detail-tbody');
+    if (tb) tb.innerHTML = `<tr><td colspan="13" style="color:var(--red);text-align:center;padding:20px;font-size:12px;">顯示錯誤：${e.message}</td></tr>`;
+  }
+}
+
+// ══════════════════════════════════════════════════
+// EXCEL EXPORT
+// ══════════════════════════════════════════════════
+function exportExcel() {
+  if (!aggregated.length) return;
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: Summary — night employees only, sorted by night hours desc
+  const s1 = [['員工編號','課別','姓名','夜點時數（小時）','跨夜天數','夜班筆數','假扣除（小時）']];
+  aggregated.forEach(r => s1.push([
+    r.empId||'', r.dept, r.name,
+    r.nightHours, r.overnight, r.nightCount, r.deductH
+  ]));
+  s1.push(['','合計',`共${aggregated.length}人`,
+    parseFloat(aggregated.reduce((s,r)=>s+r.nightHours,0).toFixed(1)),
+    aggregated.reduce((s,r)=>s+r.overnight,0),
+    aggregated.reduce((s,r)=>s+r.nightCount,0),
+    parseFloat(aggregated.reduce((s,r)=>s+r.deductH,0).toFixed(1)),
+  ]);
+  const ws1 = XLSX.utils.aoa_to_sheet(s1);
+  ws1['!cols'] = [{wch:12},{wch:18},{wch:10},{wch:18},{wch:10},{wch:10},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, ws1, '夜點津貼報表');
+
+  // Sheet 2: Detail — night shifts only
+  const nightRows = processed.filter(p => p.isNight);
+  const s2 = [['員工編號','課別','姓名','班別','出勤日','實際出勤','實際退勤','夜點區間','夜點時數','假扣除(hr)','跨夜','備註','檢核狀態']];
+  nightRows.forEach(p => s2.push([
+    p.empId||'', p.dept, p.name, p.shift, p.date,
+    fmtMin(toMin(p.cin)), fmtMin(toMin(p.cout)),
+    p.interval, p.nightH, p.deductH||'', p.overnight, p.note, p.status||''
+  ]));
+  const ws2 = XLSX.utils.aoa_to_sheet(s2);
+  ws2['!cols'] = [{wch:12},{wch:16},{wch:10},{wch:14},{wch:16},{wch:10},{wch:10},{wch:14},{wch:10},{wch:12},{wch:8},{wch:22},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, ws2, '出勤明細');
+
+  // Sheet 3: Dept pivot
+  const dmap = {};
+  aggregated.forEach(r => {
+    if (!dmap[r.dept]) dmap[r.dept] = {emp:0, night:0, overnight:0, nightCount:0};
+    dmap[r.dept].emp++;
+    dmap[r.dept].night      += r.nightHours;
+    dmap[r.dept].overnight  += r.overnight;
+    dmap[r.dept].nightCount += r.nightCount;
+  });
+  const s3 = [['課別','夜班員工人數','夜點時數合計','平均夜點/人','跨夜天數合計','夜班出勤筆數']];
+  Object.entries(dmap).sort((a,b)=>b[1].night-a[1].night)
+    .forEach(([d,g]) => s3.push([
+      d, g.emp,
+      parseFloat(g.night.toFixed(1)),
+      parseFloat((g.night/g.emp).toFixed(1)),
+      g.overnight, g.nightCount
+    ]));
+  const ws3 = XLSX.utils.aoa_to_sheet(s3);
+  ws3['!cols'] = [{wch:22},{wch:14},{wch:14},{wch:12},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb, ws3, '課別統計');
+
+  const d = new Date();
+  const stamp = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+  XLSX.writeFile(wb, `夜點津貼報表_${stamp}.xlsx`);
+  log(`✓ Excel 已匯出：${aggregated.length} 人 / ${nightRows.length} 筆夜班明細`, 'ok');
+}
+
+// ══════════════════════════════════════════════════
+// DASHBOARD
+// ══════════════════════════════════════════════════
+const CHART_COLORS = ['#1a56db','#1a7a4a','#b91c1c','#92520a','#6b21a8','#0891b2','#be185d','#15803d','#c2410c','#1d4ed8'];
+const CHART_COLORS_PALE = ['#e8f0fe','#e6f4ec','#fef2f2','#fef3e2','#f3e8ff','#e0f2fe','#fce7f3','#dcfce7','#fff7ed','#eff6ff'];
+let _charts = {};
+
+function destroyChart(id) {
+  if (_charts[id]) { _charts[id].destroy(); delete _charts[id]; }
+}
+
+function renderDashboard() {
+  if (!aggregated.length) return;
+  document.getElementById('dash-empty').style.display = 'none';
+  document.getElementById('dash-data').style.display  = 'block';
+
+  const totalNight  = aggregated.reduce((s,r)=>s+r.nightHours,0);
+  const totalON     = aggregated.reduce((s,r)=>s+r.overnight,0);
+  const totalDeduct = aggregated.reduce((s,r)=>s+r.deductH,0);
+  const avgNight    = totalNight / aggregated.length;
+  const maxPerson   = aggregated[0];
+  const minPerson   = aggregated[aggregated.length-1];
+
+  // ── KPI Cards ──
+  document.getElementById('dash-kpis').innerHTML = `
+    <div class="kpi" style="--kpi-color:#1a56db">
+      <div class="kpi-label">總夜點時數</div>
+      <div class="kpi-value">${totalNight.toFixed(1)}<span class="kpi-unit">hr</span></div>
+      <div class="kpi-sub">${aggregated.length} 位員工 · ${processed.length} 筆記錄</div>
+    </div>
+    <div class="kpi" style="--kpi-color:#1a7a4a">
+      <div class="kpi-label">平均夜點 / 人</div>
+      <div class="kpi-value">${avgNight.toFixed(1)}<span class="kpi-unit">hr</span></div>
+      <div class="kpi-sub">最高 ${maxPerson.nightHours}hr（${maxPerson.name}）</div>
+    </div>
+    <div class="kpi" style="--kpi-color:#92520a">
+      <div class="kpi-label">總跨夜天數</div>
+      <div class="kpi-value">${totalON}<span class="kpi-unit">天</span></div>
+      <div class="kpi-sub">平均 ${(totalON/aggregated.length).toFixed(1)} 天 / 人</div>
+    </div>
+    <div class="kpi" style="--kpi-color:#b91c1c">
+      <div class="kpi-label">假別扣除時數</div>
+      <div class="kpi-value">${totalDeduct.toFixed(1)}<span class="kpi-unit">hr</span></div>
+      <div class="kpi-sub">${aggregated.filter(r=>r.deductH>0).length} 人受假別影響</div>
+    </div>`;
+
+  // ── Bar Chart: top 15 employees ──
+  destroyChart('bar');
+  const top15 = aggregated.slice(0,15);
+  const ctxBar = document.getElementById('chart-bar').getContext('2d');
+  _charts.bar = new Chart(ctxBar, {
+    type:'bar',
+    data:{
+      labels: top15.map(r=>r.name),
+      datasets:[{
+        label:'夜點時數',
+        data: top15.map(r=>r.nightHours),
+        backgroundColor: top15.map((_,i)=> i===0?'#1a56db': i<3?'#3b7dd8':'#93b4ef'),
+        borderRadius:4, borderSkipped:false,
+      }]
+    },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>`${c.raw.toFixed(1)} hr`}}},
+      scales:{
+        x:{grid:{color:'rgba(0,0,0,0.04)'}, ticks:{font:{size:10},color:'#7a7e8e'}, border:{display:false}},
+        y:{grid:{display:false}, ticks:{font:{size:11,family:'Noto Sans TC'},color:'#3a3d4a'}, border:{display:false}},
+      }
+    }
+  });
+
+  // ── Rank List ──
+  const maxH = aggregated[0].nightHours;
+  document.getElementById('rank-list').innerHTML = aggregated.slice(0,10).map((r,i)=>`
+    <li class="rank-item">
+      <span class="rank-num">${i+1}</span>
+      <div style="flex:1;min-width:0;">
+        <div class="rank-name">${r.name}</div>
+        <div class="rank-dept">${r.dept}</div>
+      </div>
+      <div class="rank-bar-wrap"><div class="rank-bar" style="width:${(r.nightHours/maxH*100).toFixed(1)}%"></div></div>
+      <span class="rank-val">${r.nightHours.toFixed(1)}</span>
+    </li>`).join('');
+
+  // ── Dept aggregation ──
+  const deptMap = {};
+  aggregated.forEach(r=>{
+    if(!deptMap[r.dept]) deptMap[r.dept]={night:0,emp:0,overnight:0};
+    deptMap[r.dept].night    += r.nightHours;
+    deptMap[r.dept].emp      += 1;
+    deptMap[r.dept].overnight+= r.overnight;
+  });
+  const depts = Object.entries(deptMap).sort((a,b)=>b[1].night-a[1].night);
+
+  // ── Dept Pie ──
+  destroyChart('deptPie');
+  const ctxDeptPie = document.getElementById('chart-dept-pie').getContext('2d');
+  _charts.deptPie = new Chart(ctxDeptPie,{
+    type:'doughnut',
+    data:{
+      labels: depts.map(d=>d[0]),
+      datasets:[{data:depts.map(d=>d[1].night.toFixed(1)), backgroundColor:CHART_COLORS, borderWidth:2, borderColor:'#fff', hoverOffset:4}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw}hr`}}}
+    }
+  });
+  document.getElementById('dept-legend').innerHTML = depts.map((d,i)=>`
+    <div class="legend-item">
+      <span class="legend-dot" style="background:${CHART_COLORS[i%CHART_COLORS.length]}"></span>
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;">${d[0]}</span>
+      <span class="legend-pct">${d[1].night.toFixed(0)}hr</span>
+    </div>`).join('');
+
+  // ── Leave type analysis ──
+  const leaveTypes = {};
+  processed.forEach(p=>{
+    if(!p.note) return;
+    const m = p.note.match(/^([\u4e00-\u9fff]+)/);
+    const type = m ? m[1] : '其他';
+    if(p.deductH>0) leaveTypes[type]=(leaveTypes[type]||0)+p.deductH;
+  });
+  const leaveEntries = Object.entries(leaveTypes).sort((a,b)=>b[1]-a[1]);
+  destroyChart('leavePie');
+  if(leaveEntries.length){
+    const ctxLv = document.getElementById('chart-leave-pie').getContext('2d');
+    const leaveColors=['#e24b4a','#f59e0b','#1a7a4a','#6b21a8','#0891b2','#be185d'];
+    _charts.leavePie = new Chart(ctxLv,{
+      type:'pie',
+      data:{labels:leaveEntries.map(e=>e[0]),datasets:[{data:leaveEntries.map(e=>e[1].toFixed(1)),backgroundColor:leaveColors,borderWidth:2,borderColor:'#fff'}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw}hr`}}}}
+    });
+    document.getElementById('leave-legend').innerHTML = leaveEntries.map((e,i)=>`
+      <div class="legend-item">
+        <span class="legend-dot" style="background:${leaveColors[i%leaveColors.length]}"></span>
+        <span>${e[0]}</span>
+        <span class="legend-pct">${parseFloat(e[1]).toFixed(1)}hr</span>
+      </div>`).join('');
+  } else {
+    document.getElementById('chart-leave-pie').parentElement.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--ink3);font-size:12px;">無假別扣除資料</div>';
+  }
+
+  // ── Shift doughnut ──
+  destroyChart('shiftDoughnut');
+  const shiftCounts = {};
+  processed.forEach(p=>{ if(p.shift) shiftCounts[p.shift]=(shiftCounts[p.shift]||0)+1; });
+  const shiftEntries = Object.entries(shiftCounts).sort((a,b)=>b[1]-a[1]);
+  const ctxSD = document.getElementById('chart-shift-doughnut').getContext('2d');
+  _charts.shiftDoughnut = new Chart(ctxSD,{
+    type:'doughnut',
+    data:{labels:shiftEntries.map(e=>e[0]),datasets:[{data:shiftEntries.map(e=>e[1]),backgroundColor:CHART_COLORS,borderWidth:2,borderColor:'#fff',hoverOffset:3}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'55%',
+      plugins:{legend:{position:'bottom',labels:{font:{size:9,family:'DM Mono'},color:'#7a7e8e',boxWidth:10,padding:8}},
+        tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw}次`}}}
+    }
+  });
+
+  // ── Dept horizontal bars (custom HTML) ──
+  const maxDeptNight = depts[0][1].night;
+  const deptColors = ['#1a56db','#1a7a4a','#92520a','#b91c1c','#6b21a8','#0891b2','#be185d','#15803d','#c2410c'];
+  document.getElementById('dept-bar-list').innerHTML = depts.map((d,i)=>`
+    <div class="dept-row">
+      <span class="dept-name" title="${d[0]}">${d[0]}</span>
+      <div class="dept-bar-wrap">
+        <div class="dept-bar" style="width:${(d[1].night/maxDeptNight*100).toFixed(1)}%;background:${deptColors[i%deptColors.length]}"></div>
+      </div>
+      <span class="dept-val">${d[1].night.toFixed(1)}hr</span>
+      <span style="font-size:10px;color:var(--ink3);font-family:var(--mono);min-width:30px;text-align:right;">${d[1].emp}人</span>
+    </div>`).join('');
+
+  // ── Histogram ──
+  destroyChart('hist');
+  const vals = aggregated.map(r=>r.nightHours);
+  const binSize = 10;
+  const minV = Math.floor(Math.min(...vals)/binSize)*binSize;
+  const maxV = Math.ceil(Math.max(...vals)/binSize)*binSize;
+  const bins = [];
+  for(let v=minV; v<maxV; v+=binSize) bins.push({label:`${v}–${v+binSize}`,count:0});
+  vals.forEach(v=>{ const idx=Math.min(Math.floor((v-minV)/binSize),bins.length-1); if(bins[idx])bins[idx].count++; });
+  const ctxHist = document.getElementById('chart-hist').getContext('2d');
+  _charts.hist = new Chart(ctxHist,{
+    type:'bar',
+    data:{labels:bins.map(b=>b.label),datasets:[{label:'人數',data:bins.map(b=>b.count),backgroundColor:'#93b4ef',borderRadius:3,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw} 人`}}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:9},color:'#7a7e8e'},border:{display:false}},
+        y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:10},color:'#7a7e8e',stepSize:1},border:{display:false}},
+      }
+    }
+  });
+
+  // ── Scatter: night hours vs overnight ──
+  destroyChart('scatter');
+  const ctxSc = document.getElementById('chart-scatter').getContext('2d');
+  _charts.scatter = new Chart(ctxSc,{
+    type:'scatter',
+    data:{datasets:[{
+      label:'員工',
+      data: aggregated.map(r=>({x:r.nightHours,y:r.overnight,name:r.name,dept:r.dept})),
+      backgroundColor: aggregated.map(r=>{
+        const di=depts.findIndex(d=>d[0]===r.dept);
+        return CHART_COLORS[di%CHART_COLORS.length]+'cc';
+      }),
+      pointRadius:5, pointHoverRadius:7,
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:c=>`${c.raw.name}｜${c.raw.dept}｜夜點:${c.raw.x}hr 跨夜:${c.raw.y}天`}}
+      },
+      scales:{
+        x:{title:{display:true,text:'夜點時數（hr）',font:{size:10},color:'#7a7e8e'},grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:10},color:'#7a7e8e'},border:{display:false}},
+        y:{title:{display:true,text:'跨夜天數',font:{size:10},color:'#7a7e8e'},grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:10},color:'#7a7e8e',stepSize:1},border:{display:false}},
+      }
+    }
+  });
+
+  // ── Overnight by dept bar ──
+  destroyChart('overnightBar');
+  const ctxON = document.getElementById('chart-overnight-bar').getContext('2d');
+  const deptsSortedON = [...depts].sort((a,b)=>b[1].overnight-a[1].overnight);
+  _charts.overnightBar = new Chart(ctxON,{
+    type:'bar',
+    data:{
+      labels:deptsSortedON.map(d=>d[0]),
+      datasets:[{
+        label:'跨夜天數',
+        data:deptsSortedON.map(d=>d[1].overnight),
+        backgroundColor:deptsSortedON.map((_,i)=>CHART_COLORS[i%CHART_COLORS.length]),
+        borderRadius:4,borderSkipped:false,
+      }]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw} 天`}}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:9,family:'Noto Sans TC'},color:'#7a7e8e'},border:{display:false}},
+        y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:10},color:'#7a7e8e',stepSize:1},border:{display:false}},
+      }
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════
+// EIP
+// ══════════════════════════════════════════════════
+function buildHdrs() {
+  const auth=document.getElementById('f-auth').value;
+  const user=document.getElementById('f-user').value;
+  const pass=document.getElementById('f-pass').value;
+  const custom=document.getElementById('f-hdrs').value.trim();
+  const h={'Accept':'application/json'};
+  if(auth==='basic'&&user) h['Authorization']='Basic '+btoa(user+':'+pass);
+  if(auth==='bearer'&&pass) h['Authorization']='Bearer '+pass;
+  if(auth==='apikey'&&pass) h['X-API-Key']=pass;
+  if(custom){try{Object.assign(h,JSON.parse(custom))}catch(e){}}
+  return h;
+}
+async function testEIP(){
+  const url=document.getElementById('f-url').value.trim();
+  if(!url){log('請輸入 EIP 網址','warn');return;}
+  setEIP('ping','測試中...');
+  try{
+    const r=await fetch(url+document.getElementById('f-path').value+'?test=1',{method:'HEAD',headers:buildHdrs(),signal:AbortSignal.timeout(5000)});
+    setEIP('ok',`連線成功 HTTP ${r.status}`);
+    log(`EIP 回應 HTTP ${r.status}`,'ok');
+  }catch(e){setEIP('err','連線失敗');log('CORS 或網址不可達，建議直接上傳 xlsx','warn');}
+}
+async function connectEIP(){
+  const url=document.getElementById('f-url').value.trim();
+  const path=document.getElementById('f-path').value;
+  const month=document.getElementById('f-month').value;
+  if(!url||!month){log('請填寫網址與月份','warn');return;}
+  document.getElementById('eip-spin').style.display='inline';
+  setEIP('ping',`抓取 ${month}...`);
+  try{
+    const r=await fetch(`${url}${path}?month=${month}`,{headers:buildHdrs(),signal:AbortSignal.timeout(15000)});
+    if(!r.ok)throw new Error(`HTTP ${r.status}`);
+    const json=await r.json();
+    const data=Array.isArray(json)?json:(json.data||json.records||[]);
+    log(`EIP 回傳 ${data.length} 筆`,'ok');
+    if(data.length) detectColumns(Object.keys(data[0]));
+    rawRows=normalizeRows(data);
+    calculate();
+    setEIP('ok',`已連線（${rawRows.length} 筆）`);
+  }catch(e){setEIP('err','失敗');log(`EIP 失敗：${e.message}`,'err');}
+  finally{document.getElementById('eip-spin').style.display='none';}
+}
+function setEIP(state,label){
+  const dot=document.getElementById('eip-dot');
+  dot.className='cdot';if(state)dot.classList.add(state==='ping'?'ping':state);
+  document.getElementById('eip-lbl').textContent=label;
+  document.getElementById('eip-dot').className='cdot '+(state==='ok'?'ok':state==='err'?'err':'ping');
+}
+function saveEIP(){
+  try{localStorage.setItem('eip',JSON.stringify({url:document.getElementById('f-url').value,path:document.getElementById('f-path').value,user:document.getElementById('f-user').value,auth:document.getElementById('f-auth').value}));log('EIP 設定已儲存','ok');}catch(e){}
+}
+
+// ══════════════════════════════════════════════════
+// SHIFT CONFIG
+// ══════════════════════════════════════════════════
+function renderShifts(){
+  document.getElementById('shift-list').innerHTML=Object.entries(SHIFTS).map(([code,s],i)=>`
+    <div class="shift-row">
+      <span style="font-family:var(--mono);font-weight:500;font-size:11px;min-width:90px">${code}</span>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--ink3);flex:1">${fmtMin(s.ns)}–${fmtMin(s.ne<s.ns?s.ne+1440:s.ne)}</span>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--accent);min-width:50px;text-align:right">${s.max.toFixed(1)} hr</span>
+      <button class="btn btn-xs" style="color:var(--red);border-color:rgba(185,28,28,.2)" onclick="removeShift('${code}')">移除</button>
+    </div>`).join('');
+
+  // Col map list
+  document.getElementById('col-map-list').innerHTML=Object.entries(FIELD_MAP).map(([k,aliases])=>`
+    <div class="fmap-row">
+      <span class="fmap-key">${k}</span>
+      <span style="font-size:10px;color:var(--ink3)">${aliases.slice(0,4).map(a=>`<span class="chip">${a}</span>`).join(' ')}</span>
+    </div>`).join('');
+}
+function removeShift(code){delete SHIFTS[code];renderShifts();log(`移除班別 ${code}`,'warn');}
+function addShift(){
+  const code=document.getElementById('new-shift').value.trim();
+  const m=code.match(/^(\d{4})-(\d{4})$/);
+  if(!m){log('格式應為 HHMM-HHMM','err');return;}
+  const sMin=parseInt(m[1].slice(0,2))*60+parseInt(m[1].slice(2,4));
+  const eMin=parseInt(m[2].slice(0,2))*60+parseInt(m[2].slice(2,4));
+  const NS=22*60,NE7=7*60;
+  const eNorm=eMin<=sMin?eMin+1440:eMin;
+  const ne=Math.min(eNorm,NE7+1440)%1440;
+  const max=Math.max(0,(Math.min(eNorm,NE7+1440)-Math.max(NS,sMin))/60);
+  SHIFTS[code]={ns:NS,ne,max};
+  renderShifts();
+  document.getElementById('new-shift').value='';
+  log(`新增班別 ${code}，夜點上限 ${max.toFixed(1)} hr`,'ok');
+}
+
+// ══════════════════════════════════════════════════
+// DEMO — matches new 出勤紀錄_20260416.xlsx format exactly
+// ══════════════════════════════════════════════════
+function loadDemo(){
+  const demo = [
+    // 新格式：12 欄，班別含前綴，備註無空格，空值為 \xa0
+    {'員工編號':9307001,'員工姓名':'黃馨儀','部門':'運務課','班別名稱':'上班2330-0830','檢核狀態':'正常','出勤日':'2026/03/26(四)','實際出勤':'23:30','實際退勤':'09:36','遲到':'\xa0','早退':'\xa0','曠職':'\xa0','備註':'\xa0'},
+    {'員工編號':9307001,'員工姓名':'黃馨儀','部門':'運務課','班別名稱':'上班2330-0830','檢核狀態':'正常','出勤日':'2026/03/27(五)','實際出勤':'00:27','實際退勤':'08:46','遲到':'\xa0','早退':'\xa0','曠職':'\xa0','備註':'特休2330~0030'},
+    {'員工編號':9307001,'員工姓名':'黃馨儀','部門':'運務課','班別名稱':'休假2330-0830','檢核狀態':'正常','出勤日':'2026/03/28(六)','實際出勤':'23:30','實際退勤':'09:10','遲到':'\xa0','早退':'\xa0','曠職':'\xa0','備註':'\xa0'},
+    {'員工編號':9308002,'員工姓名':'張文仁','部門':'岡山營運課','班別名稱':'上班2200-0700','檢核狀態':'正常','出勤日':'2026/03/26(四)','實際出勤':'22:00','實際退勤':'07:10','遲到':'\xa0','早退':'\xa0','曠職':'\xa0','備註':'\xa0'},
+    {'員工編號':9308002,'員工姓名':'張文仁','部門':'岡山營運課','班別名稱':'上班2200-0700','檢核狀態':'正常','出勤日':'2026/03/27(五)','實際出勤':'','實際退勤':'','遲到':'\xa0','早退':'\xa0','曠職':'\xa0','備註':'特休2200~0700'},
+    {'員工編號':9308002,'員工姓名':'張文仁','部門':'岡山營運課','班別名稱':'上班2200-0700','檢核狀態':'異常 未處理','出勤日':'2026/03/28(六)','實際出勤':'22:05','實際退勤':'07:00','遲到':'\xa0','早退':'\xa0','曠職':'\xa0','備註':'\xa0'},
+    {'員工編號':9309003,'員工姓名':'江衍成','部門':'運務課','班別名稱':'上班1700-0200','檢核狀態':'正常','出勤日':'2026/03/26(四)','實際出勤':'17:49','實際退勤':'02:22','遲到':'\xa0','早退':'\xa0','曠職':'\xa0','備註':'公假1700~1800'},
+    {'員工編號':9309003,'員工姓名':'江衍成','部門':'運務課','班別名稱':'上班1700-0200','檢核狀態':'正常','出勤日':'2026/03/27(五)','實際出勤':'17:56','實際退勤':'02:00','遲到':'\xa0','早退':'\xa0','曠職':'\xa0','備註':'喪假1700~0200'},
+    {'員工編號':9310004,'員工姓名':'陳美英','部門':'大肚理貨課','班別名稱':'上班1500-0000','檢核狀態':'正常','出勤日':'2026/03/26(四)','實際出勤':'15:00','實際退勤':'00:05','遲到':'\xa0','早退':'\xa0','曠職':'\xa0','備註':'\xa0'},
+    {'員工編號':9310004,'員工姓名':'陳美英','部門':'大肚理貨課','班別名稱':'上班1500-0000','檢核狀態':'正常','出勤日':'2026/03/27(五)','實際出勤':'15:00','實際退勤':'00:03','遲到':'\xa0','早退':'\xa0','曠職':'\xa0','備註':'分娩假1500~1800'},
+    // Day shift — should be filtered out (0 night hours)
+    {'員工編號':9311005,'員工姓名':'吳雅惠','部門':'商品企劃課','班別名稱':'上班0800-1700','檢核狀態':'正常','出勤日':'2026/03/26(四)','實際出勤':'07:55','實際退勤':'17:14','遲到':'\xa0','早退':'\xa0','曠職':'\xa0','備註':'\xa0'},
+    // Cross-page same person test
+    {'員工編號':9307001,'員工姓名':'黃馨儀','部門':'運務課','班別名稱':'上班2330-0830','檢核狀態':'正常','出勤日':'2026/04/01(三)','實際出勤':'23:23','實際退勤':'10:52','遲到':'\xa0','早退':'\xa0','曠職':'\xa0','備註':'\xa0'},
+  ];
+  detectedCols = {
+    empId:'員工編號', name:'員工姓名', dept:'部門', shift:'班別名稱',
+    status:'檢核狀態', date:'出勤日', cin:'實際出勤', cout:'實際退勤',
+    note:'備註'
+  };
+  rawRows = normalizeRows(demo);
+  log(`示範資料（新格式）：${demo.length} 筆，包含前綴班別 / \\xa0 備註 / 13 種假別 / 跨頁合併`, 'info');
+  calculate();
+}
+
+// ══════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════
+document.getElementById('f-month').value=`${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`;
+try{const cfg=JSON.parse(localStorage.getItem('eip')||'{}');
+  if(cfg.url)document.getElementById('f-url').value=cfg.url;
+  if(cfg.path)document.getElementById('f-path').value=cfg.path;
+  if(cfg.user)document.getElementById('f-user').value=cfg.user;
+  if(cfg.auth)document.getElementById('f-auth').value=cfg.auth;
+}catch(e){}
+renderShifts();
 </script>
 </body>
 </html>
