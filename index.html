@@ -855,7 +855,6 @@ function normalizeRows(rows) {
 function parseLeave(note) {
   if (!note) return [];
   const leaves=[];
-  // Match any prefix before 4-digit time ~ 4-digit time
   for (const m of note.matchAll(/(\d{4})\s*[~～]\s*(\d{4})/g)) {
     const s=parseInt(m[1].slice(0,2))*60+parseInt(m[1].slice(2,4));
     const e=parseInt(m[2].slice(0,2))*60+parseInt(m[2].slice(2,4));
@@ -864,10 +863,36 @@ function parseLeave(note) {
   return leaves;
 }
 
-function overlapMins(s1,e1,s2,e2) {
-  const a2=e1<=s1?e1+1440:e1;
-  const b2=e2<=s2?e2+1440:e2;
-  return Math.max(0,Math.min(a2,b2)-Math.max(s1,s2));
+function leaveOverlapMins(ls, le, ns, ne) {
+  const NS = 22 * 60;   // 1320
+
+  function seg(s1, e1, s2, e2) { return Math.max(0, Math.min(e1,e2) - Math.max(s1,s2)); }
+
+  // Night Seg A: [max(ns,22:00), 24:00]
+  const nightA_s = Math.max(ns, NS);
+  const nightA_e = 1440;
+
+  // Night Seg B: [00:00, ne] — ONLY exists when ne is genuinely in the morning (0 < ne < 22:00)
+  // If ne >= 1320 (e.g. 1400-2300 has ne=23:00=1380), there is no morning segment
+  const hasB = ne > 0 && ne < NS;
+
+  let total = 0;
+
+  if (le > ls) {
+    // Contiguous (non-overnight) leave
+    total += seg(ls, le, nightA_s, nightA_e);
+    if (hasB) total += seg(ls, le, 0, ne);
+  } else {
+    // Overnight leave: split at midnight
+    const lvA_s = ls, lvA_e = 1440;
+    const lvB_s = 0,  lvB_e = le;
+    total += seg(lvA_s, lvA_e, nightA_s, nightA_e);
+    if (hasB) total += seg(lvA_s, lvA_e, 0, ne);
+    total += seg(lvB_s, lvB_e, nightA_s, nightA_e);
+    if (hasB) total += seg(lvB_s, lvB_e, 0, ne);
+  }
+
+  return total;
 }
 
 // ══════════════════════════════════════════════════
@@ -968,8 +993,9 @@ function calcRow(r) {
   const {ns, ne, max} = sd;
 
   // Leave deduction — all leave types (特休/事假/病假/公假/喪假/...)
+  // Uses two-segment overlap to correctly handle leaves in the 00:00~07:00 window
   const leaves    = parseLeave(r.note);
-  const deductMin = leaves.reduce((s,[ls,le])=>s+overlapMins(ls,le,ns,ne),0);
+  const deductMin = leaves.reduce((s,[ls,le])=>s+leaveOverlapMins(ls,le,ns,ne),0);
   const nightH    = parseFloat(Math.max(0, max - deductMin/60).toFixed(1));
 
   // Overnight count
